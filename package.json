@@ -7,7 +7,7 @@
 		"url": "https://www.timcool.me"
 	},
 	"scripts": {
-		"start": "vite",
+		"start": "npx http-server ./dist",
 		"dev": "vite",
 		"build": "vite build",
 		"serve": "vite preview"
