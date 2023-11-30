@@ -17,7 +17,7 @@ export default defineConfig({
 	build: {
 		target: 'esnext',
 		rollupOptions: {
-			external: ["@/input/ZylemGamePad"],
+			external: ["@/input/ZylemGamePad", "@/stage/ZylemStage"],
 		},
 	},
 });
