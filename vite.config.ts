@@ -17,7 +17,17 @@ export default defineConfig({
 	build: {
 		target: 'esnext',
 		rollupOptions: {
-			external: ["@/input/ZylemGamePad", "@/stage/ZylemStage"],
+			external: [
+				"@/input/ZylemGamePad",
+				"@/stage/ZylemStage",
+				"@/scene/ZylemScene",
+				"@/game/ZylemHUD",
+				"@/game/ZylemGame",
+				"@/game/ZylemDebug",
+				"@state/index",
+				"@/interfaces/Update",
+				"@/device/Mobile"
+			],
 		},
 	},
 });
