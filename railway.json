@@ -7,8 +7,8 @@
 				"npm:config": {
 					"dependsOn": ["setup"],
 					"cmds": [
-						"npm config set @tcool86:registry https://registry.npmjs.org/@tcool86/zylem/-/zylem-0.0.1.tgz --omit=dev",
-						"npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}"
+						"npm config --omit=dev set @tcool86:registry https://registry.npmjs.org/@tcool86/zylem/-/zylem-0.0.1.tgz",
+						"npm config --omit=dev set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}"
 					]
 				},
 				"install": {
