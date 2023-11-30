@@ -4,16 +4,15 @@
 		"builder": "NIXPACKS",
 		"nixpacksPlan": {
 			"phases": {
-				"npm:config": {
+				"pnpm:config": {
 					"dependsOn": ["setup"],
 					"cmds": [
-						"pnpm cache clear --force",
-						"npm config set @tcool86:registry https://registry.npmjs.org/@tcool86/zylem/-/zylem-0.0.1.tgz",
-						"npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}"
+						"pnpm config set @tcool86:registry https://registry.npmjs.org/@tcool86/zylem/-/zylem-0.0.1.tgz",
+						"pnpm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}"
 					]
 				},
 				"install": {
-					"dependsOn": ["setup", "npm:config"]
+					"dependsOn": ["setup", "pnpm:config"]
 				}
 			}
 		}
