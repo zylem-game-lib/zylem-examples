@@ -4,15 +4,12 @@
 		"builder": "NIXPACKS",
 		"nixpacksPlan": {
 			"phases": {
-				"pnpm:config": {
+				"custom": {
 					"dependsOn": ["setup"],
-					"cmds": [
-						"pnpm config set @tcool86:registry https://registry.npmjs.org/@tcool86/zylem/-/zylem-0.0.1.tgz",
-						"pnpm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}"
-					]
+					"cmds": ["echo `custom command`"]
 				},
 				"install": {
-					"dependsOn": ["setup", "pnpm:config"]
+					"dependsOn": ["setup", "custom"]
 				}
 			}
 		}
