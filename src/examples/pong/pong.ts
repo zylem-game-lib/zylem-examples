@@ -3,7 +3,7 @@ import { BoardSide } from './board';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 const { Color, Vector3 } = Zylem.THREE;
-debugger;
+
 const game = Zylem.create({
 	id: 'pong',
 	// @ts-ignore
