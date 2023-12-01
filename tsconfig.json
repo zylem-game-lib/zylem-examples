@@ -3,13 +3,17 @@
 		"strict": true,
 		"target": "ESNext",
 		"module": "ESNext",
-		"moduleResolution": "node",
+		"moduleResolution": "Node",
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
-		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
 		"types": ["vite/client"],
+		"allowJs": false,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
 		"noEmit": true,
-		"isolatedModules": true
+		"jsx": "preserve"
 	}
 }

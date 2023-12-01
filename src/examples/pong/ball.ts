@@ -1,4 +1,4 @@
-import Zylem from '@tcool86/zylem/src/index';
+import { Zylem } from '@tcool86/zylem';
 const { Sphere } = Zylem.GameEntityType;
 import { board, BoardSide } from './board';
 const { Howl } = Zylem;
