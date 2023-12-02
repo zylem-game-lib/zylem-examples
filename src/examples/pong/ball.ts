@@ -1,10 +1,11 @@
 import { Zylem } from '@tcool86/zylem';
 const { Sphere } = Zylem.GameEntityType;
 import { board, BoardSide } from './board';
+import bounceUrl from '../../assets/bounce.wav';
 const { Howl } = Zylem;
 
 const sound = new Howl({
-	src: '/assets/bounce.wav',
+	src: bounceUrl,
 	volume: 0.1,
 });
 const minSpeed = 10.0;
