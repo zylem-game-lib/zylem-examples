@@ -29,6 +29,18 @@ export const ExamplesSelect = () => {
 				});
 			},
 		},
+		{
+			label: 'Space Invaders',
+			value: 'space-invaders',
+			action: () => {
+				const invaders = import(
+					'./examples/space-invaders/space-invaders'
+				);
+				invaders.then((invaders) => {
+					invaders.default.start();
+				});
+			},
+		},
 	];
 	return (
 		<Select.Root
