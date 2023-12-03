@@ -7,6 +7,7 @@
 		"url": "https://www.timcool.me"
 	},
 	"scripts": {
+		"prepare": "panda codegen",
 		"start": "npx http-server ./dist",
 		"dev": "vite",
 		"build": "vite build",
@@ -14,14 +15,17 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
+		"@pandacss/dev": "^0.20.1",
 		"solid-devtools": "^0.27.3",
 		"typescript": "^5.1.3",
 		"vite": "^4.3.9",
 		"vite-plugin-solid": "^2.7.0"
 	},
 	"dependencies": {
+		"@ark-ui/solid": "^1.1.0",
 		"@dimforge/rapier3d-compat": "^0.11.2",
 		"@tcool86/zylem": "^0.0.5",
+		"solid-icons": "^1.1.0",
 		"solid-js": "^1.7.6"
 	}
 }
