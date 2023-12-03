@@ -1,13 +1,11 @@
-import { Select } from '@ark-ui/solid';
-import { Index, Portal } from 'solid-js/web';
-import { IoChevronDownSharp } from 'solid-icons/io';
-import styles from './ExampleSelect.module.css';
+import { Box, FormControl, InputLabel, MenuItem, Select } from '@suid/material';
+import { SelectChangeEvent } from '@suid/material/Select';
 import { createSignal } from 'solid-js';
 
 type Item = { label: string; value: string; action: Function };
 
-export const ExamplesSelect = () => {
-	const [inGame, setInGame] = createSignal(false);
+export function ExamplesSelect() {
+	const [item, setItem] = createSignal('');
 	const items: Item[] = [
 		{
 			label: 'Pong',
@@ -42,49 +40,30 @@ export const ExamplesSelect = () => {
 			},
 		},
 	];
+
+	const handleChange = (event: SelectChangeEvent) => {
+		setItem(event.target.value);
+		const item = items.find((item) => item.value === event.target.value);
+		item?.action();
+	};
+
 	return (
-		<Select.Root
-			class={inGame() ? styles['select-disabled'] : styles.select}
-			items={items}
-			onValueChange={(e) => {
-				setInGame(true);
-				const { items } = e;
-				items[0].action();
-			}}
-		>
-			<Select.Label>Examples</Select.Label>
-			<Select.Control class={styles['select-dropdown']}>
-				<Select.Trigger class={styles['select-dropdown']}>
-					<Select.ValueText placeholder="Select an example" />
-					<Select.Indicator>
-						<IoChevronDownSharp />
-					</Select.Indicator>
-				</Select.Trigger>
-				<Select.ClearTrigger>x</Select.ClearTrigger>
-			</Select.Control>
-			<Portal>
-				<Select.Positioner>
-					<Select.Content>
-						<Select.ItemGroup id="example">
-							<Select.ItemGroupLabel for="example">
-								Examples
-							</Select.ItemGroupLabel>
-							<Index each={items}>
-								{(item) => (
-									<Select.Item item={item().value}>
-										<Select.ItemText>
-											{item().label}
-										</Select.ItemText>
-										<Select.ItemIndicator>
-											✓
-										</Select.ItemIndicator>
-									</Select.Item>
-								)}
-							</Index>
-						</Select.ItemGroup>
-					</Select.Content>
-				</Select.Positioner>
-			</Portal>
-		</Select.Root>
+		<Box sx={{ minWidth: 120 }}>
+			<FormControl fullWidth>
+				<InputLabel id="select-demo-label">Examples</InputLabel>
+				<Select
+					labelId="select-demo-label"
+					id="select-demo"
+					value={item()}
+					label="Examples"
+					onChange={handleChange}
+				>
+					{items.map((item) => {
+						const { value, label } = item;
+						return <MenuItem value={value}>{label}</MenuItem>;
+					})}
+				</Select>
+			</FormControl>
+		</Box>
 	);
-};
+}
