@@ -1,5 +1,8 @@
 .examples-section {
-	position: relative;
-	width: 100%;
+	display: flex;
+	position: static;
+	top: 0;
+	left: 0;
+	width: 33vw;
 	color: #fff;
 }
