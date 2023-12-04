@@ -1,3 +1,19 @@
 .App {
+	position: relative;
+	display: flex;
 	padding: 20px;
+}
+
+.showcase {
+	position: relative;
+	flex: 2;
+	margin: 20px;
+}
+
+.showcase > div {
+	width: 1280px;
+	height: 768px;
+	position: absolute;
+	top: 0;
+	left: 0;
 }

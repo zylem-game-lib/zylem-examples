@@ -3,6 +3,8 @@
 	position: static;
 	top: 0;
 	left: 0;
-	width: 33vw;
+	flex: 1;
+	max-width: 250px;
 	color: #fff;
+	gap: 20px;
 }

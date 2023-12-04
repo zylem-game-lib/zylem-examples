@@ -1,10 +1,19 @@
-import { Box, FormControl, InputLabel, MenuItem, Select } from '@suid/material';
+import {
+	Box,
+	Button,
+	FormControl,
+	InputLabel,
+	MenuItem,
+	Select,
+} from '@suid/material';
 import { SelectChangeEvent } from '@suid/material/Select';
 import { createSignal } from 'solid-js';
+import styles from './ExampleSelect.module.css';
 
 type Item = { label: string; value: string; action: Function };
 
 export function ExamplesSelect() {
+	const [inGame, setInGame] = createSignal(false);
 	const [item, setItem] = createSignal('');
 	const items: Item[] = [
 		{
@@ -45,10 +54,11 @@ export function ExamplesSelect() {
 		setItem(event.target.value);
 		const item = items.find((item) => item.value === event.target.value);
 		item?.action();
+		setInGame(true);
 	};
 
 	return (
-		<Box sx={{ minWidth: 120 }}>
+		<Box sx={{ minWidth: 120 }} class={styles.wrapper}>
 			<FormControl fullWidth>
 				<InputLabel id="select-demo-label">Examples</InputLabel>
 				<Select
@@ -57,6 +67,7 @@ export function ExamplesSelect() {
 					value={item()}
 					label="Examples"
 					onChange={handleChange}
+					disabled={inGame()}
 				>
 					{items.map((item) => {
 						const { value, label } = item;
@@ -64,6 +75,15 @@ export function ExamplesSelect() {
 					})}
 				</Select>
 			</FormControl>
+			<Button
+				variant="contained"
+				disabled={!inGame()}
+				onClick={() => {
+					window.location.reload();
+				}}
+			>
+				Reset
+			</Button>
 		</Box>
 	);
 }
