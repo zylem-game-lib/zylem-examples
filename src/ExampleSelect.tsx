@@ -39,13 +39,23 @@ export function ExamplesSelect() {
 		{
 			label: 'Space Invaders',
 			value: 'space-invaders',
-			action: () => {
+			action: async () => {
 				const invaders = import(
 					'./examples/space-invaders/space-invaders'
 				);
-				invaders.then((invaders) => {
-					invaders.default.start();
-				});
+				const game = await invaders;
+				game.default.start();
+			},
+		},
+		{
+			label: 'Asteroids',
+			value: 'asteroids',
+			action: async () => {
+				const asteroids = import(
+					'./examples/asteroids/asteroids'
+				);
+				const game = await asteroids;
+				game.default.start();
 			},
 		},
 	];

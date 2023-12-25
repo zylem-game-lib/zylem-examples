@@ -10,6 +10,7 @@ const App: Component = () => {
 				<div class="game-demo" id="pong"></div>
 				<div class="game-demo" id="breakout"></div>
 				<div class="game-demo" id="space-invaders"></div>
+				<div class="game-demo" id="asteroids"></div>
 			</div>
 		</div>
 	);
