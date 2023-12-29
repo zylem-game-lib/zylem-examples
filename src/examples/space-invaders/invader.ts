@@ -6,7 +6,7 @@ import invaderShot from '../../assets/space-invaders/invader-shot.png';
 
 const { Sprite } = Zylem.GameEntityType;
 
-function InvaderBullet({ x = 0, y = -8, health = 2 }) {
+function InvaderBullet({ x = 0, y = -8 }) {
 	return {
 		name: `bullet`,
 		type: Sprite,
@@ -32,7 +32,7 @@ function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 	}
 }
 
-export function Invader(x = 0, y = 0, health = 2) {
+export function Invader(x = 0, y = 0) {
 	return {
 		name: `invader_${x}_${y}`,
 		type: Sprite,

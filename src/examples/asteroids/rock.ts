@@ -4,7 +4,7 @@ import rockSmall from '../../assets/asteroids/rock-small.png';
 import rockMedium from '../../assets/asteroids/rock-medium.png';
 import rockMedium2 from '../../assets/asteroids/rock-medium-2.png';
 import rockLarge from '../../assets/asteroids/rock-large.png';
-import { wrapAroundBoard } from './board';
+import { boardHeight, boardWidth } from './board';
 
 const { Sprite } = Zylem.GameEntityType;
 const { Vector3 } = Zylem.THREE;
@@ -79,8 +79,7 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				}
 				asteroid.hitCooldown = 0;
 			}
-			const { newPosX, newPosY } = wrapAroundBoard(x, y);
-			asteroid.setPosition(newPosX, newPosY, 1 / health);
+			asteroid.wrapAroundXY(boardWidth, boardHeight);
 		},
 		collision: (asteroid: any, other: any, { gameState }: any) => {
 			if (asteroid.health < 1) {
