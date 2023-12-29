@@ -5,17 +5,11 @@ import invader2 from '../../assets/space-invaders/invader-2.png';
 import invaderShot from '../../assets/space-invaders/invader-shot.png';
 
 const { Sprite } = Zylem.GameEntityType;
-const { destroy } = Zylem;
-const { Vector3 } = Zylem.THREE;
-
-const invaderSize = new Vector3(0.3, 0.3, 0.3);
-const bulletSize = new Vector3(0.1, 0.1, 0.1);
 
 function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 	return {
 		name: `bullet`,
 		type: Sprite,
-		size: bulletSize,
 		images: [invaderShot],
 		props: {},
 		setup: (entity: any) => {
@@ -25,12 +19,12 @@ function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 			const { y } = bullet.getPosition();
 			bullet.moveXY(Math.sin(y) * 8, -15);
 			if (y < -10) {
-				destroy(bullet);
+				bullet.destroy();
 			}
 		},
 		collision: (bullet: any, other: any, { gameState }: any) => {
 			if (other.name.includes('player')) {
-				destroy(bullet);
+				bullet.destroy();
 				other.health--;
 			}
 		},
@@ -42,7 +36,6 @@ export function Invader(x = 0, y = 0, health = 2) {
 	return {
 		name: `invader_${x}_${y}`,
 		type: Sprite,
-		size: invaderSize,
 		images: [invader1, invader2],
 		props: {
 			animationRate: 1,

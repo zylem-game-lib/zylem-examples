@@ -5,14 +5,22 @@ import shipDamaged from '../../assets/space-invaders/ship-damaged.png';
 const { Sprite } = Zylem.GameEntityType;
 const { Vector3 } = Zylem.THREE;
 
-const playerSize = new Vector3(0.5, 0.5, 0.1);
+const playerSize = new Vector3(2, 2, 0.1);
+const playerCollisionSize = new Vector3(0.5, 0.5, 0.1);
 
 export function Player(x = 0, y = -8, health = 2) {
 	return {
 		name: `player`,
 		type: Sprite,
 		size: playerSize,
-		images: [ship, shipDamaged],
+		collisionSize: playerCollisionSize,
+		images: [{
+			name: 'normal',
+			file: ship
+		}, {
+			name: 'damaged',
+			file: shipDamaged
+		}],
 		props: {
 			health: 2,
 			bulletRate: 0.4,
@@ -50,11 +58,9 @@ export function Player(x = 0, y = -8, health = 2) {
 				player.sprites[0].material.opacity = 1;
 			}
 			if (player.health <= 1) {
-				player.sprites[0].visible = false;
-				player.sprites[1].visible = true;
+				player.setSprite('damaged');
 			} else {
-				player.sprites[1].visible = false;
-				player.sprites[0].visible = true;
+				player.setSprite('normal');
 			}
 		},
 		collision: (player: any, other: any, { gameState }: any) => {
