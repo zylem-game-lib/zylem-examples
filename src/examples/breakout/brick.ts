@@ -1,6 +1,5 @@
 import { Zylem } from '@tcool86/zylem';
 const { Box } = Zylem.GameEntityType;
-const { destroy } = Zylem;
 const { Color, Vector3 } = Zylem.THREE;
 
 export function Brick(posX: number, posY: number) {
@@ -21,7 +20,7 @@ export function Brick(posX: number, posY: number) {
 		},
 		collision: (brick: any) => {
 			if (brick.health === 0) {
-				destroy(brick);
+				brick.destroy();
 			}
 		},
 		destroy: (gameState: any) => {
