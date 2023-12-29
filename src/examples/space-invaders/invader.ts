@@ -36,22 +36,36 @@ export function Invader(x = 0, y = 0) {
 	return {
 		name: `invader_${x}_${y}`,
 		type: Sprite,
+		size: new Zylem.THREE.Vector3(2, 2, 1),
+		collisionSize: new Zylem.THREE.Vector3(1, 1, 1),
 		images: [invader1, invader2],
 		props: {
 			animationRate: 1,
 			animationCurrent: 0,
-			dropRate: 1.5,
+			dropRate: 2.0,
 			dropCurrent: 0,
 			direction: 1,
 			speed: 5,
 			fireRate: 2,
 			fireChance: 12,
 			fireCurrent: 0,
+			health: 1,
+			alive: true,
 		},
 		setup: (entity: any) => {
 			entity.setPosition(x, y, 0);
 		},
 		update: (_delta: number, { entity: invader, inputs }: any) => {
+			// TODO: look into why destroyed objects still get updated
+			if (!invader.alive) {
+				return;
+			}
+			if (invader.health < 1 && invader.alive) {
+				invader.health = 0;
+				invader.alive = false;
+				invader.destroy();
+				return;
+			}
 			const { x, y } = invader.getPosition();
 			if (invader.animationCurrent < invader.animationRate) {
 				invader.animationCurrent += _delta;
@@ -82,10 +96,12 @@ export function Invader(x = 0, y = 0) {
 		},
 		collision: (invader: any, other: any) => {
 			if (other.name === 'player') {
-				invader.destroy();
+				invader.health = 0;
 				other.health--;
 			}
 		},
-		destroy: () => { }
+		destroy: (gameState: any) => {
+			gameState.globals.invaders--;
+		}
 	}
 }

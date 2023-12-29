@@ -22,7 +22,7 @@ export function Bullet({ x = 0, y = -8, health = 2 }) {
 		collision: (bullet: any, other: any, { gameState }: any) => {
 			if (other.name.includes('invader')) {
 				bullet.destroy();
-				other.destroy();
+				other.health = 0;
 				gameState.globals.score += 10;
 			}
 		},

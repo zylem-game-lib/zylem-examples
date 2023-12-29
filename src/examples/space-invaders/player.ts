@@ -35,9 +35,9 @@ export function Player(x = 0, y = -8, health = 2) {
 		update: (_delta: number, { entity: player, inputs }: any) => {
 			const { moveRight, moveLeft, buttonA } = inputs[0];
 			const { x, y } = player.getPosition();
-			if (moveRight) {
+			if (moveRight && x < 10) {
 				player.moveX(10);
-			} else if (moveLeft) {
+			} else if (moveLeft && x > -10) {
 				player.moveX(-10);
 			} else {
 				player.moveX(0);

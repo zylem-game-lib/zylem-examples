@@ -20,6 +20,11 @@ const game = Zylem.create({
 				if (globals.lives === 0) {
 					game.reset();
 				}
+				if (globals.invaders === 0) {
+					const previousScore = globals.score;
+					game.reset();
+					globals.score = previousScore;
+				}
 			}
 		],
 		setup: (scene, HUD) => {
@@ -36,8 +41,8 @@ const game = Zylem.create({
 		},
 		children: ({ gameState }) => {
 			const invaders: any[] = [];
-			for (let i = -8; i <= 8; i += 2) {
-				for (let j = 8; j >= 4; j -= 2) {
+			for (let i = -10; i <= 8; i += 2) {
+				for (let j = 10; j >= 4; j -= 2) {
 					const invader = Invader(i, j);
 					invaders.push(invader);
 					if (gameState) {
