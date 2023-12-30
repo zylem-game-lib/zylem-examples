@@ -12,6 +12,13 @@ import styles from './ExampleSelect.module.css';
 
 type Item = { label: string; value: string; action: Function };
 
+function loadGame(game: string) {
+	return async function () {
+		const gameModule = await import(`./examples/${game}/${game}`);
+		await gameModule.default.start();
+	};
+}
+
 export function ExamplesSelect() {
 	const [inGame, setInGame] = createSignal(false);
 	const [item, setItem] = createSignal('');
@@ -19,44 +26,22 @@ export function ExamplesSelect() {
 		{
 			label: 'Pong',
 			value: 'pong',
-			action: () => {
-				const pong = import('./examples/pong/pong');
-				pong.then((pong) => {
-					pong.default.start();
-				});
-			},
+			action: loadGame('pong'),
 		},
 		{
 			label: 'Breakout',
 			value: 'breakout',
-			action: () => {
-				const breakout = import('./examples/breakout/breakout');
-				breakout.then((breakout) => {
-					breakout.default.start();
-				});
-			},
+			action: loadGame('breakout'),
 		},
 		{
 			label: 'Space Invaders',
 			value: 'space-invaders',
-			action: async () => {
-				const invaders = import(
-					'./examples/space-invaders/space-invaders'
-				);
-				const game = await invaders;
-				game.default.start();
-			},
+			action: loadGame('space-invaders'),
 		},
 		{
 			label: 'Asteroids',
 			value: 'asteroids',
-			action: async () => {
-				const asteroids = import(
-					'./examples/asteroids/asteroids'
-				);
-				const game = await asteroids;
-				game.default.start();
-			},
+			action: loadGame('asteroids'),
 		},
 	];
 
