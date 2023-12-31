@@ -12,13 +12,6 @@ import styles from './ExampleSelect.module.css';
 
 type Item = { label: string; value: string; action: Function };
 
-function loadGame(game: string) {
-	return async function () {
-		const gameModule = await import(`./examples/${game}/${game}`);
-		await gameModule.default.start();
-	};
-}
-
 export function ExamplesSelect() {
 	const [inGame, setInGame] = createSignal(false);
 	const [item, setItem] = createSignal('');
@@ -26,22 +19,36 @@ export function ExamplesSelect() {
 		{
 			label: 'Pong',
 			value: 'pong',
-			action: loadGame('pong'),
+			action: async () => {
+				const game = await import('./examples/pong/pong');
+				game.default.start();
+			},
 		},
 		{
 			label: 'Breakout',
 			value: 'breakout',
-			action: loadGame('breakout'),
+			action: async () => {
+				const game = await import('./examples/breakout/breakout');
+				game.default.start();
+			},
 		},
 		{
 			label: 'Space Invaders',
 			value: 'space-invaders',
-			action: loadGame('space-invaders'),
+			action: async () => {
+				const game = await import(
+					'./examples/space-invaders/space-invaders'
+				);
+				game.default.start();
+			},
 		},
 		{
 			label: 'Asteroids',
 			value: 'asteroids',
-			action: loadGame('asteroids'),
+			action: async () => {
+				const game = await import('./examples/asteroids/asteroids');
+				game.default.start();
+			},
 		},
 	];
 
