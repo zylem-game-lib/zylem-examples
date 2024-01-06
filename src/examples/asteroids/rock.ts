@@ -1,4 +1,4 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import rockExtraSmall from '../../assets/asteroids/rock-x-small.png';
 import rockSmall from '../../assets/asteroids/rock-small.png';
 import rockMedium from '../../assets/asteroids/rock-medium.png';
@@ -6,8 +6,8 @@ import rockMedium2 from '../../assets/asteroids/rock-medium-2.png';
 import rockLarge from '../../assets/asteroids/rock-large.png';
 import { boardHeight, boardWidth } from './board';
 
-const { Sprite } = Zylem.GameEntityType;
-const { Vector3 } = Zylem.THREE;
+const { Sprite } = Zylem;
+const { Vector3 } = THREE;
 
 // TODO: write mappings in engine
 const kXSM = 4;

@@ -1,10 +1,10 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import ship from '../../assets/asteroids/ship-idle.png';
 import shipThrust from '../../assets/asteroids/ship-thrust.png';
 import { boardHeight, boardWidth } from './board';
 
-const { Sprite, Sphere } = Zylem.GameEntityType;
-const { Vector3, Color } = Zylem.THREE;
+const { Sprite, Sphere } = Zylem;
+const { Vector3, Color } = THREE;
 
 export function Bullet({ position = new Vector3(0, 0, 0), velX = 0, velY = 0 }) {
 	return {
