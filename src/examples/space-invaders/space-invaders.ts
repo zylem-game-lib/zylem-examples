@@ -1,19 +1,18 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import { Invader } from "./invader";
 import { Player } from "./player";
-const { Color } = Zylem.THREE;
-// const { PerspectiveType } = Zylem;
+const { Color } = THREE;
+const { Flat2D } = Zylem;
 
 const game = Zylem.create({
 	id: 'space-invaders',
-	// @ts-ignore TODO: expose perspective type
-	perspective: 'flat-2d',
 	globals: {
 		score: 0,
 		lives: 3,
 		invaders: 0,
 	},
-	stage: {
+	stages: [{
+		perspective: Flat2D,
 		backgroundColor: Color.NAMES.black,
 		conditions: [
 			(globals, game) => {
@@ -27,7 +26,7 @@ const game = Zylem.create({
 				}
 			}
 		],
-		setup: (scene, HUD) => {
+		setup: ({ scene, HUD }) => {
 			HUD.createText({
 				text: '0',
 				binding: 'score',
@@ -55,7 +54,7 @@ const game = Zylem.create({
 				...invaders
 			]
 		},
-	},
+	}],
 });
 
 export default game;

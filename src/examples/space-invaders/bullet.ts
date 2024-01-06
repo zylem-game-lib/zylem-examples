@@ -1,7 +1,7 @@
 import { Zylem } from '@tcool86/zylem';
 import shot from '../../assets/space-invaders/shot.png';
 
-const { Sprite } = Zylem.GameEntityType;
+const { Sprite } = Zylem;
 
 export function Bullet({ x = 0, y = -8, health = 2 }) {
 	return {

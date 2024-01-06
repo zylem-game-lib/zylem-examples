@@ -1,9 +1,9 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import { Bullet } from './bullet';
 import ship from '../../assets/space-invaders/ship.png';
 import shipDamaged from '../../assets/space-invaders/ship-damaged.png';
-const { Sprite } = Zylem.GameEntityType;
-const { Vector3 } = Zylem.THREE;
+const { Sprite } = Zylem;
+const { Vector3 } = THREE;
 
 const playerSize = new Vector3(2, 2, 0.1);
 const playerCollisionSize = new Vector3(0.5, 0.5, 0.1);

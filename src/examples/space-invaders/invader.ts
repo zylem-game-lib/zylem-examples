@@ -1,10 +1,11 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 
 import invader1 from '../../assets/space-invaders/invader-1.png';
 import invader2 from '../../assets/space-invaders/invader-2.png';
 import invaderShot from '../../assets/space-invaders/invader-shot.png';
 
-const { Sprite } = Zylem.GameEntityType;
+const { Sprite } = Zylem;
+const { Vector3 } = THREE;
 
 function InvaderBullet({ x = 0, y = -8 }) {
 	return {
@@ -36,8 +37,8 @@ export function Invader(x = 0, y = 0) {
 	return {
 		name: `invader_${x}_${y}`,
 		type: Sprite,
-		size: new Zylem.THREE.Vector3(2, 2, 1),
-		collisionSize: new Zylem.THREE.Vector3(1, 1, 1),
+		size: new Vector3(2, 2, 1),
+		collisionSize: new Vector3(1, 1, 1),
 		images: [invader1, invader2],
 		props: {
 			animationRate: 1,
