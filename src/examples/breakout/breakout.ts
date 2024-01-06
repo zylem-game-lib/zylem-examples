@@ -1,23 +1,21 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 import { Brick } from './brick';
 
-const { Color, Vector3 } = Zylem.THREE;
-// TODO: expose perspective type
-// const { PerspectiveType } = Zylem;
+const { Flat2D } = Zylem;
+const { Color, Vector3 } = THREE;
 
 const breakout = Zylem.create({
 	id: 'breakout',
-	// @ts-ignore TODO: expose perspective type
-	perspective: 'flat-2d',
 	globals: {
 		score: 0,
 		level: 1,
 		lives: 3,
 		bricks: 0
 	},
-	stage: {
+	stages: [{
+		perspective: Flat2D,
 		backgroundColor: Color.NAMES.black,
 		conditions: [
 			(globals, game) => {
@@ -29,7 +27,7 @@ const breakout = Zylem.create({
 				}
 			}
 		],
-		setup: (scene, HUD) => {
+		setup: ({ scene, HUD }) => {
 			HUD.createText({
 				text: '0',
 				binding: 'score',
@@ -58,7 +56,7 @@ const breakout = Zylem.create({
 				...bricks
 			]
 		}
-	}
+	}]
 });
 
 export default breakout;

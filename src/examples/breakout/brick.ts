@@ -1,6 +1,6 @@
-import { Zylem } from '@tcool86/zylem';
-const { Box } = Zylem.GameEntityType;
-const { Color, Vector3 } = Zylem.THREE;
+import { Zylem, THREE } from '@tcool86/zylem';
+const { Box } = Zylem;
+const { Color, Vector3 } = THREE;
 
 export function Brick(posX: number, posY: number) {
 	return {

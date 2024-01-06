@@ -1,8 +1,7 @@
-import { Zylem } from '@tcool86/zylem';
-const { Sphere } = Zylem.GameEntityType;
+import { Zylem, Howl } from '@tcool86/zylem';
+const { Sphere } = Zylem;
 import { board } from './board';
 import bounceUrl from '../../assets/bounce.wav';
-const { Howl } = Zylem;
 
 const sound = new Howl({
 	src: bounceUrl,
