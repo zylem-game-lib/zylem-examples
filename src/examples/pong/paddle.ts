@@ -1,7 +1,7 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import { board, BoardSide } from './board';
-const { Vector3 } = Zylem.THREE;
-const { Box } = Zylem.GameEntityType;
+const { Vector3 } = THREE;
+const { Box } = Zylem;
 
 const paddleSpeed = 20.0;
 const paddleSize = new Vector3(0.5, 4, 1);

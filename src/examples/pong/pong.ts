@@ -1,20 +1,21 @@
-import { Zylem } from '@tcool86/zylem';
+import { Zylem, THREE } from '@tcool86/zylem';
 import { BoardSide } from './board';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
-const { Color, Vector3 } = Zylem.THREE;
+
+const { Color, Vector3 } = THREE;
+const { Flat2D } = Zylem;
 
 const game = Zylem.create({
 	id: 'pong',
-	// @ts-ignore
-	perspective: 'flat-2d',
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
 		centerText: '',
 		winner: 0
 	},
-	stage: {
+	stages: [{
+		perspective: Flat2D,
 		backgroundColor: Color.NAMES.black,
 		conditions: [
 			(globals, game) => {
@@ -38,7 +39,7 @@ const game = Zylem.create({
 				}
 			}
 		],
-		setup: (scene, HUD) => {
+		setup: ({ scene, HUD }) => {
 			HUD.createText({
 				text: '',
 				binding: 'centerText',
@@ -62,7 +63,7 @@ const game = Zylem.create({
 				Ball(),
 			];
 		},
-	},
+	}],
 });
 
 export default game;
