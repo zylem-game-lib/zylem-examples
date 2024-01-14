@@ -50,6 +50,14 @@ export function ExamplesSelect() {
 				game.default.start();
 			},
 		},
+		{
+			label: '2.5D Platformer',
+			value: 'platformer',
+			action: async () => {
+				const game = await import('./examples/platformer/platformer');
+				game.default.start();
+			},
+		},
 	];
 
 	const handleChange = (event: SelectChangeEvent) => {
