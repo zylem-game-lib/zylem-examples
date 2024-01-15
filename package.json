@@ -1,6 +1,6 @@
 {
 	"name": "zylem-examples",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Example projects and demos showcasing the capabilities and usage of the Zylem library. Learn how to integrate and utilize the library effectively in your own interactive media projects.",
 	"author": {
 		"name": "Tim Cool",
@@ -24,7 +24,7 @@
 		"@suid/icons-material": "^0.6.11",
 		"@suid/material": "^0.15.1",
 		"@suid/vite-plugin": "^0.1.5",
-		"@tcool86/zylem": "^0.1.3",
+		"@tcool86/zylem": "^0.1.4",
 		"solid-icons": "^1.1.0",
 		"solid-js": "^1.7.6"
 	}

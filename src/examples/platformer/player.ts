@@ -14,6 +14,7 @@ export function Player() {
 	return {
 		name: `player`,
 		type: Sprite,
+		physics: true,
 		images: playerImages,
 		animations: playerAnimations,
 		size: new Vector3(2, 2, 1),
