@@ -33,9 +33,9 @@ function Goal() {
 		props: {
 			hasEntered: false,
 		},
-		size: new Vector3(20, 20, 20),
+		size: new Vector3(20, 10, 20),
 		setup(entity: any) {
-			entity.setPosition(30, 0, 0);
+			entity.setPosition(30, -3, 0);
 		},
 		update: (delta: number, { entity: goal }: any) => {
 			if (!goal._debugMesh) {
