@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.preferredDarkColorTheme": "Default Dark Modern",
+		"workbench.colorTheme": "Earthbound - Fire Spring (Darker)"
+	}
+}
