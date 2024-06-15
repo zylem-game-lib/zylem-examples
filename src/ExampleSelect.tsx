@@ -20,42 +20,42 @@ export function ExamplesSelect() {
 			label: 'Pong',
 			value: 'pong',
 			action: async () => {
-				const game = await import('./examples/pong/pong');
-				game.default.start();
+				await import('./examples/pong/pong');
 			},
 		},
 		{
 			label: 'Breakout',
 			value: 'breakout',
 			action: async () => {
-				const game = await import('./examples/breakout/breakout');
-				game.default.start();
+				await import('./examples/breakout/breakout');
 			},
 		},
 		{
 			label: 'Space Invaders',
 			value: 'space-invaders',
 			action: async () => {
-				const game = await import(
-					'./examples/space-invaders/space-invaders'
-				);
-				game.default.start();
+				await import('./examples/space-invaders/space-invaders');
 			},
 		},
 		{
 			label: 'Asteroids',
 			value: 'asteroids',
 			action: async () => {
-				const game = await import('./examples/asteroids/asteroids');
-				game.default.start();
+				await import('./examples/asteroids/asteroids');
 			},
 		},
 		{
 			label: '2.5D Platformer',
 			value: 'platformer',
 			action: async () => {
-				const game = await import('./examples/platformer/platformer');
-				game.default.start();
+				await import('./examples/platformer/platformer');
+			},
+		},
+		{
+			label: '3D Test',
+			value: 'playground',
+			action: async () => {
+				await import('./examples/playground/index');
 			},
 		},
 	];

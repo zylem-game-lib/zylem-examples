@@ -1,31 +1,34 @@
-import { Zylem } from '@tcool86/zylem';
+import { sprite, THREE } from '@tcool86/zylem';
 import shot from '../../assets/space-invaders/shot.png';
 
-const { Sprite } = Zylem;
+const { Vector3 } = THREE;
+const bulletSize = new Vector3(1, 1, 0.1);
 
 export function Bullet({ x = 0, y = -8, health = 2 }) {
-	return {
+	return sprite({
 		name: `bullet`,
-		type: Sprite,
-		images: [shot],
-		props: {},
-		setup: (entity: any) => {
+		size: bulletSize,
+		images: [{
+			name: 'normal',
+			file: shot
+		}],
+		setup: ({ entity }) => {
 			entity.setPosition(x, y, 0);
 		},
-		update: (_delta: number, { entity: bullet, inputs }: any) => {
+		update: ({ entity: bullet }) => {
 			const { y } = bullet.getPosition();
 			bullet.moveXY(Math.sin(y), 15);
 			if (y > 10) {
-				bullet.destroy();
+				(bullet as any).destroy();
 			}
 		},
-		collision: (bullet: any, other: any, { gameState }: any) => {
+		collision: (bullet, other, globals) => {
+			const { score } = globals;
 			if (other.name.includes('invader')) {
 				bullet.destroy();
-				other.health = 0;
-				gameState.globals.score += 10;
+				other.destroy();
+				score.set(score.get() + 10);
 			}
 		},
-		destroy: () => { }
-	}
+	})
 }

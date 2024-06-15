@@ -1,21 +1,19 @@
-import { Zylem, THREE } from '@tcool86/zylem';
+import { box, THREE } from "@tcool86/zylem";
 import { board } from './board';
-const { Box } = Zylem;
-const { Vector3 } = THREE;
 
+const { Color, Vector3 } = THREE;
 const paddleSpeed = 20.0;
 const paddleSize = new Vector3(4, 0.5, 1);
 
 export function Paddle() {
-	return {
-		name: `paddle`,
-		type: Box,
+	return box({
+		name: 'paddle',
 		size: paddleSize,
-		props: {},
-		setup: (entity: any) => {
-			entity.setPosition(0, -10, 0);
+		color: new Color(1, 1, 1),
+		setup: ({ entity }) => {
+			entity.setPosition(0, -9, 0);
 		},
-		update: (_delta: number, { entity: paddle, inputs }: any) => {
+		update: ({ entity: paddle, inputs }) => {
 			const { x } = paddle.getPosition();
 			const { moveRight, moveLeft } = inputs[0];
 			const canMoveRight = x < board.right;
@@ -28,6 +26,5 @@ export function Paddle() {
 				paddle.moveX(0);
 			}
 		},
-		destroy: () => { }
-	}
+	})
 }

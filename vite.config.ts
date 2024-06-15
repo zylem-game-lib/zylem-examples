@@ -13,6 +13,7 @@ export default defineConfig({
 		solidPlugin(),
 		suidPlugin(),
 	],
+	assetsInclude: ["**/*.fbx"],
 	server: {
 		port: 3000,
 	},

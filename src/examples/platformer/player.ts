@@ -1,8 +1,9 @@
-import { Zylem, THREE } from '@tcool86/zylem';
+import { sprite, THREE } from '@tcool86/zylem';
+import { settings } from './settings';
 import { playerAnimations, playerImages } from './assets';
 
-const { Sprite } = Zylem;
 const { Vector3 } = THREE;
+const { groundLevel } = settings;
 
 enum JumpState {
 	Idle,
@@ -11,14 +12,13 @@ enum JumpState {
 };
 
 export function Player() {
-	return {
+	return sprite({
 		name: `player`,
-		type: Sprite,
-		physics: true,
 		images: playerImages,
 		animations: playerAnimations,
 		size: new Vector3(2, 2, 1),
-		props: {
+		collisionSize: new Vector3(0.5, 2, 1),
+		custom: {
 			jumpState: JumpState.Idle,
 			jumpTime: 0.25,
 			jumpTimer: 0,
@@ -27,15 +27,15 @@ export function Player() {
 			onGround: false,
 			movingLeft: false,
 		},
-		setup: (entity: any) => {
-			entity.setPosition(0, 0, 0);
+		setup: ({ entity }) => {
+			entity.setPosition(0, groundLevel + 5, 0);
 		},
-		update: (_delta: number, { entity: player, inputs }: any) => {
-			const { moveLeft, moveRight, buttonA, buttonB } = inputs[0];
+		update: ({ delta, entity: player, inputs }: any) => {
+			const { moveLeft, moveRight, buttonA } = inputs[0];
 			let { x: velX, y: velY } = player.getVelocity();
 
 			if (!player.onGround) {
-				velY += player.gravity * _delta;
+				velY += player.gravity * delta;
 			}
 
 			if (player.jumpState === JumpState.Idle) {
@@ -46,11 +46,11 @@ export function Player() {
 			if (moveLeft) {
 				velX = -10;
 				player.movingLeft = true;
-				player.setAnimation('run-left', _delta);
+				player.setAnimation('run-left', delta);
 			} else if (moveRight) {
 				velX = 10;
 				player.movingLeft = false;
-				player.setAnimation('run', _delta);
+				player.setAnimation('run', delta);
 			} else {
 				velX = 0;
 			}
@@ -63,7 +63,7 @@ export function Player() {
 			) {
 				velY = player.jumpVelocity;
 				player.jumpState = JumpState.Jumping;
-				player.jumpTimer += _delta;
+				player.jumpTimer += delta;
 				player.onGround = false;
 			}
 
@@ -89,5 +89,5 @@ export function Player() {
 				entity.jumpTimer = 0;
 			}
 		}
-	}
+	})
 }
