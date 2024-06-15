@@ -1,3 +1,9 @@
+## About
+
+This app showcases example games built using the Zylem framework. Currently, the framework is private, but it will be made public soon. It aims to be a more functional successor to the Pyramid Game Lib framework.
+
+[Zylem examples online demo](https://zylem-production.up.railway.app/)
+
 ## Usage
 
 Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
@@ -5,7 +11,7 @@ Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnp
 This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
 
 ```bash
-npm install # or pnpm install or yarn install
+pnpm install
 ```
 
 ### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
