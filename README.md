@@ -1,5 +1,4 @@
-## About
-
+# About Zylem examples
 This app showcases example games built using the Zylem framework. Currently, the framework is private, but it will be made public soon. It aims to be a more functional successor to the Pyramid Game Lib framework.
 
 [Zylem examples online demo](https://zylem-production.up.railway.app/)
