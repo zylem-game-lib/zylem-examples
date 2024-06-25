@@ -21,8 +21,8 @@ dependencies:
     specifier: ^0.1.5
     version: 0.1.5(vite@4.3.9)
   '@tcool86/zylem':
-    specifier: ^0.1.13
-    version: 0.1.13(react@18.3.1)
+    specifier: ^0.1.14
+    version: 0.1.14(react@18.3.1)
   solid-icons:
     specifier: ^1.1.0
     version: 1.1.0(solid-js@1.8.17)
@@ -1365,8 +1365,8 @@ packages:
       - supports-color
     dev: false
 
-  /@tcool86/zylem@0.1.13(react@18.3.1):
-    resolution: {integrity: sha512-PDri3c6YMH/nRsKMqCvDLpDjbid+XPXw4gCUDR4puwgE6KA/rUiCVDKT2GRtUey+q3L5Mf4HrGmHTRpZA6SlUA==}
+  /@tcool86/zylem@0.1.14(react@18.3.1):
+    resolution: {integrity: sha512-jwGtxbPPGVz4YI5av+pcOjiew5KWWKHdkOEwelMRxbqUcYHV+EzXjFn+Tw+rUge/WHQeTvgNdQyByIrwaAxM2w==}
     dependencies:
       '@dimforge/rapier3d': 0.11.2
       '@dimforge/rapier3d-compat': 0.11.2
