@@ -1,11 +1,16 @@
-import { sphere, THREE } from "@tcool86/zylem";
-const { Color, Vector2 } = THREE;
+import { sprite, THREE } from "@tcool86/zylem";
+import bulletSprite from '../../assets/asteroids/bullet.png';
+
+const { Vector2, Vector3 } = THREE;
 
 export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
-	return sphere({
+	return sprite({
 		name: `bullet`,
-		radius: 0.1,
-		color: new Color(Color.NAMES.gold),
+		size: new Vector3(0.5, 0.5, 1),
+		images: [{
+			name: 'normal',
+			file: bulletSprite
+		}],
 		custom: {
 			velX: 0,
 			velY: 0,
@@ -24,6 +29,7 @@ export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
 			(bullet as any).timer += delta;
 			if ((bullet as any).timer > (bullet as any).totalTime) {
 				(bullet as any).destroy();
+				(bullet as any).timer = 0;
 			}
 		},
 		collision: (bullet: any, other: any, globals: any) => {
@@ -33,6 +39,7 @@ export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
 					other.hit = true;
 					score.set(score.get() + Math.abs(4 - other.health) * 25);
 				}
+				(bullet as any).timer = 0;
 				bullet.destroy();
 			}
 		}
