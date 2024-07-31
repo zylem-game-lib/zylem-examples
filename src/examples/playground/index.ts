@@ -1,4 +1,4 @@
-import { game, stage, actor, box, plane, sphere, sprite, zone, Zylem, THREE, Perspectives } from '@tcool86/zylem';
+import { game, stage, actor, box, plane, sphere, zone, Zylem, THREE, Perspectives } from '@tcool86/zylem';
 import woodBox from '../../assets/playground/wood-box.jpg';
 import grass from '../../assets/playground/grass.jpg';
 import rainMan from '../../assets/playground/rain-man.png';

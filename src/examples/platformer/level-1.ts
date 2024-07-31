@@ -30,16 +30,16 @@ export function LevelOne() {
 			HUD.addText('0', {
 				binding: 'score',
 				update: (element, value) => {
-					element.text = `Score: ${value}`;
+					element.updateText(`Score: ${value}`);
 				},
-				position: new Vector2(50, 5)
+				position: new Vector2(200, 5)
 			});
 			HUD.addText('0', {
 				binding: 'time',
 				update: (element, value) => {
-					element.text = `Time: ${value}`;
+					element.updateText(`Time: ${value}`);
 				},
-				position: new Vector2(25, 5)
+				position: new Vector2(400, 5)
 			});
 		},
 		children: () => {

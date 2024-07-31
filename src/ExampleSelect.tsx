@@ -58,6 +58,13 @@ export function ExamplesSelect() {
 				await import('./examples/playground/index');
 			},
 		},
+		{
+			label: 'Shader Test',
+			value: 'shader',
+			action: async () => {
+				await import('./examples/playground/shader');
+			},
+		},
 	];
 
 	const handleChange = (event: SelectChangeEvent) => {

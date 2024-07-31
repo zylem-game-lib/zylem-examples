@@ -31,16 +31,16 @@ const stage1 = stage({
 		HUD.addText('0', {
 			binding: 'p1Score',
 			update: (element, value) => {
-				element.text = value;
+				element.updateText(value);
 			},
-			position: new Vector2(25, 10)
+			position: new Vector2(250, 10)
 		});
 		HUD.addText('0', {
 			binding: 'p2Score',
 			update: (element, value) => {
-				element.text = value;
+				element.updateText(value);
 			},
-			position: new Vector2(75, 10)
+			position: new Vector2(850, 10)
 		});
 		HUD.addText('', {
 			binding: 'winner',
@@ -48,9 +48,9 @@ const stage1 = stage({
 				if (value === 0) {
 					return;
 				}
-				element.text = `Player ${value} wins!`;
+				element.updateText(`Player ${value} wins!`);
 			},
-			position: new Vector2(50, 50)
+			position: new Vector2(450, 50)
 		})
 	},
 	children: () => {

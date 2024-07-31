@@ -25,16 +25,16 @@ const stage1 = stage({
 		HUD.addText('0', {
 			binding: 'score',
 			update: (element, value) => {
-				element.text = `Score: ${value}`;
+				element.updateText(`Score: ${value}`);
 			},
-			position: new Vector2(50, 5)
+			position: new Vector2(200, 5)
 		});
 		HUD.addText('0', {
 			binding: 'lives',
 			update: (element, value) => {
-				element.text = `Lives: ${value}`;
+				element.updateText(`Lives: ${value}`);
 			},
-			position: new Vector2(25, 5)
+			position: new Vector2(400, 5)
 		});
 	},
 	children: () => {
