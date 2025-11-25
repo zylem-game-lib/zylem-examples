@@ -20,49 +20,49 @@ export function ExamplesSelect() {
 			label: 'Pong',
 			value: 'pong',
 			action: async () => {
-				await import('./examples/pong/pong');
+				await import('./pong/pong');
 			},
 		},
 		{
 			label: 'Breakout',
 			value: 'breakout',
 			action: async () => {
-				await import('./examples/breakout/breakout');
+				await import('./breakout/breakout');
 			},
 		},
 		{
 			label: 'Space Invaders',
 			value: 'space-invaders',
 			action: async () => {
-				await import('./examples/space-invaders/space-invaders');
+				await import('./space-invaders/space-invaders');
 			},
 		},
 		{
 			label: 'Asteroids',
 			value: 'asteroids',
 			action: async () => {
-				await import('./examples/asteroids/asteroids');
+				await import('./asteroids/asteroids');
 			},
 		},
 		{
 			label: '2.5D Platformer',
 			value: 'platformer',
 			action: async () => {
-				await import('./examples/platformer/platformer');
+				await import('./platformer/platformer');
 			},
 		},
 		{
 			label: '3D Test',
 			value: 'playground',
 			action: async () => {
-				await import('./examples/playground/index');
+				await import('./playground/index');
 			},
 		},
 		{
 			label: 'Shader Test',
 			value: 'shader',
 			action: async () => {
-				await import('./examples/playground/shader');
+				await import('./playground/shader');
 			},
 		},
 	];

@@ -13,12 +13,285 @@
 			type="image/ico"
 			href="/src/assets/favicon.ico"
 		/>
+		<link rel="stylesheet" href="/src/ui/main.css" />
 		<title>Zylem Examples</title>
 	</head>
 	<body>
 		<noscript>You need to enable JavaScript to run this app.</noscript>
-		<div id="root"></div>
+		<div class="frame">
+			<div class="app" id="app">
+				<aside class="sidebar">
+					<div class="brand">
+						<h1>Zylem v0.1.11</h1>
+						<a href="#" id="docs">view documentation</a>
+					</div>
+					<div class="list" id="gameList">
+						<!-- Items added by JS -->
+					</div>
+				</aside>
 
-		<script src="/src/index.tsx" type="module"></script>
+				<main class="main">
+					<div class="stage" id="stageMsg">
+						iframe with game content loaded
+					</div>
+					<div class="status" id="status">Idle</div>
+				</main>
+			</div>
+		</div>
+
+		<script type="module">
+			/**
+			 * Launcher shell:
+			 * - Renders sidebar items (icon + name)
+			 * - On click: dynamically import a module URL
+			 * - Runs module with mount(container) -> { dispose() }
+			 * - Ensures proper teardown before switching modules
+			 *
+			 * Replace demo module URLs with your real ones.
+			 */
+
+			const statusEl = document.getElementById('status');
+			const listEl = document.getElementById('gameList');
+			const stageMsg = document.getElementById('stageMsg');
+
+			let current = {
+				moduleUrl: null,
+				dispose: null,
+				container: null,
+			};
+
+			// --- Utilities ---------------------------------------------------------------
+
+			function setStatus(text) {
+				statusEl.textContent = text;
+			}
+			function active(el) {
+				document
+					.querySelectorAll('.item.active')
+					.forEach((n) => n.classList.remove('active'));
+				el?.classList.add('active');
+			}
+			function clearStage() {
+				if (current.dispose) {
+					try {
+						current.dispose();
+					} catch (e) {
+						console.warn('dispose error', e);
+					}
+				}
+				current.dispose = null;
+				if (current.container && current.container.isConnected) {
+					current.container.remove();
+				}
+				current.container = document.createElement('div');
+				Object.assign(current.container.style, {
+					position: 'absolute',
+					inset: '12px',
+					borderRadius: '12px',
+					overflow: 'hidden',
+				});
+				document.querySelector('.main').appendChild(current.container);
+				stageMsg.style.display = 'none';
+			}
+
+			// --- Demo module factory (creates blob: URLs you can treat like real modules)-
+			function makeDemoModule({ bg, draw, label }) {
+				const code = `
+			  let raf = 0, t0 = 0;
+			  /** @param {HTMLElement} mountEl */
+			  export function mount(mountEl){
+				// Set up a <canvas> demo
+				const canvas = document.createElement('canvas');
+				canvas.width = mountEl.clientWidth;
+				canvas.height = mountEl.clientHeight;
+				const ctx = canvas.getContext('2d');
+				mountEl.appendChild(canvas);
+		  
+				function onResize(){
+				  canvas.width = mountEl.clientWidth;
+				  canvas.height = mountEl.clientHeight;
+				}
+				const ro = new ResizeObserver(onResize); ro.observe(mountEl);
+		  
+				const bg = ${JSON.stringify(bg)};
+				function loop(ts){
+				  if(!t0) t0 = ts;
+				  const t = (ts - t0) / 1000;
+				  ctx.fillStyle = bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+				  ${draw}
+				  raf = requestAnimationFrame(loop);
+				}
+				raf = requestAnimationFrame(loop);
+		  
+				return {
+				  dispose(){
+					cancelAnimationFrame(raf);
+					ro.disconnect();
+					canvas.remove();
+				  }
+				};
+			  }
+			  export default { mount };
+			`.trim();
+				return URL.createObjectURL(
+					new Blob([code], { type: 'text/javascript' })
+				);
+			}
+
+			// --- Create a few demo module URLs ------------------------------------------
+			const modules = [
+				{
+					id: 'game-1',
+					name: 'Game 1',
+					url: makeDemoModule({
+						bg: '#0a1012',
+						label: 'Game 1',
+						draw: `
+				  const r = 40 + Math.sin(t*2)*10;
+				  ctx.beginPath();
+				  ctx.arc(canvas.width/2, canvas.height/2, r, 0, Math.PI*2);
+				  ctx.lineWidth = 6;
+				  ctx.strokeStyle = 'rgba(70, 230, 130, .9)';
+				  ctx.stroke();
+				  ctx.font = '14px ui-monospace';
+				  ctx.fillStyle = '#7ce397';
+				  ctx.fillText('Game 1 running (dispose safe)', 12, 22);
+				`,
+					}),
+				},
+				{
+					id: 'game-2',
+					name: 'Game 2',
+					url: makeDemoModule({
+						bg: '#0c0e12',
+						label: 'Game 2',
+						draw: `
+				  const size = 60;
+				  const x = canvas.width/2 + Math.cos(t*1.5)*120;
+				  const y = canvas.height/2 + Math.sin(t*1.5)*80;
+				  ctx.save();
+				  ctx.translate(x, y);
+				  ctx.rotate(t);
+				  ctx.strokeStyle = 'rgba(124,227,151,.9)';
+				  ctx.lineWidth = 4;
+				  ctx.strokeRect(-size/2, -size/2, size, size);
+				  ctx.restore();
+				  ctx.font = '14px ui-monospace';
+				  ctx.fillStyle = '#7ce397';
+				  ctx.fillText('Game 2 spinning box', 12, 22);
+				`,
+					}),
+				},
+				{
+					id: 'game-3',
+					name: 'Game 3',
+					url: makeDemoModule({
+						bg: '#0a0d10',
+						label: 'Game 3',
+						draw: `
+				  const bars = 40;
+				  for(let i=0;i<bars;i++){
+					const w = canvas.width/bars;
+					const h = (Math.sin(t*2 + i*.3)*.5+.5)*canvas.height*.7;
+					ctx.fillStyle = 'rgba(38,192,110,.7)';
+					ctx.fillRect(i*w, canvas.height-h, w-2, h);
+				  }
+				  ctx.font = '14px ui-monospace';
+				  ctx.fillStyle = '#7ce397';
+				  ctx.fillText('Game 3 equalizer', 12, 22);
+				`,
+					}),
+				},
+				{
+					id: 'pong',
+					name: 'Pong',
+					url: '/src/examples/pong/pong.ts',
+					kind: 'script',
+					elementId: 'pong',
+					pill: 'script',
+				},
+			];
+
+			// --- SVG icon (single path; tint inherits from text color) -------------------
+			const joystickSVG = `
+		  <svg fill="var(--accent)" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 566.873 566.873" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <g> <path d="M557.876,442.776H8.998c-4.965,0-8.997,4.032-8.997,8.996v70.979c0,24.367,19.753,44.121,44.122,44.121h478.628 c24.367,0,44.121-19.754,44.121-44.121v-70.979C566.87,446.81,562.839,442.776,557.876,442.776z"></path> <path d="M18.537,403.132h529.798c3.451,0,6.598-1.965,8.104-5.065c1.5-3.101,1.105-6.791-1.024-9.503L441.991,244.448 c-8.369-10.628-21.146-16.838-34.672-16.838h-45.938v76.034c-0.076,31.859-30.668,52.443-77.945,52.443 s-77.871-20.582-77.944-52.525v-75.954h-45.949c-13.527,0-26.306,6.21-34.674,16.838L11.458,388.563 c-2.13,2.714-2.526,6.404-1.024,9.503C11.937,401.169,15.083,403.132,18.537,403.132z"></path> <path d="M243.281,178.681V303.56c0.019,8.129,17.983,14.734,40.153,14.734c22.169,0,40.135-6.605,40.154-14.734V178.672 c31.74-15.096,53.846-47.193,53.846-84.672c0-51.916-42.09-94-94.018-94c-51.89,0-93.979,42.083-93.979,94 C189.438,131.487,211.543,163.586,243.281,178.681z"></path> </g> </g> </g> </g></svg>`;
+
+			// --- Render list -------------------------------------------------------------
+			for (const m of modules) {
+				const item = document.createElement('button');
+				item.className = 'item';
+				item.type = 'button';
+				item.dataset.url = m.url;
+				item.innerHTML = `
+			  <span class="icon">${joystickSVG}</span>
+			  <span class="name">${m.name}</span>
+			  <span class="pill">${m.pill || 'module'}</span>
+			`;
+				// Optional: prefetch on hover (best-effort; same-origin/CORS applies)
+				item.addEventListener(
+					'pointerenter',
+					() => {
+						const link = document.createElement('link');
+						link.rel = 'modulepreload';
+						link.href = m.url;
+						document.head.appendChild(link);
+					},
+					{ once: true }
+				);
+
+				item.addEventListener('click', async (e) => {
+					const url = e.currentTarget.dataset.url;
+					if (current.moduleUrl === url) return;
+					active(item);
+					setStatus(`Loading ${m.name}…`);
+					clearStage();
+					try {
+						// Dynamically load the selected module or script
+						const mod = await import(/* @vite-ignore */ url);
+						const api = mod?.default?.mount || mod?.mount;
+						if (typeof api === 'function') {
+							// Standard module with mount()
+							const { dispose } = api(current.container) || {};
+							current.dispose =
+								typeof dispose === 'function' ? dispose : null;
+						} else if (m.kind === 'script' && m.elementId) {
+							// Script-only module: look up element by id and attach
+							const el = document.getElementById(m.elementId);
+							if (!el)
+								throw new Error(
+									`Element #${m.elementId} not found after loading script`
+								);
+							current.container.appendChild(el);
+							current.dispose = () => {
+								if (el.isConnected) el.remove();
+							};
+						} else {
+							throw new Error('Module missing mount()');
+						}
+
+						current.moduleUrl = url;
+						setStatus(
+							`${m.name} loaded. (click another to unload)`
+						);
+					} catch (err) {
+						console.error(err);
+						setStatus('Failed to load module. See console.');
+						current.container.remove();
+						stageMsg.style.display = '';
+					}
+				});
+
+				listEl.appendChild(item);
+			}
+
+			// Select the first item by default
+			listEl.querySelector('.item')?.click();
+
+			// (Demo only) “view documentation” prevents navigation
+			document.getElementById('docs').addEventListener('click', (e) => {
+				e.preventDefault();
+				alert('Hook this up to your docs URL 👍');
+			});
+		</script>
 	</body>
 </html>

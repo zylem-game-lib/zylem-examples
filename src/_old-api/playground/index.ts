@@ -2,8 +2,8 @@ import { game, stage, actor, box, plane, sphere, zone, Zylem, THREE, Perspective
 import woodBox from '../../assets/playground/wood-box.jpg';
 import grass from '../../assets/playground/grass.jpg';
 import rainMan from '../../assets/playground/rain-man.png';
-import timboIdle from '../../assets/playground/idle.fbx';
-import timboRun from '../../assets/playground/run.fbx';
+import timboIdle from '../../assets/playground/idle.fbx?raw';
+import timboRun from '../../assets/playground/run.fbx?raw';
 
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
 const { ThirdPerson } = Perspectives;

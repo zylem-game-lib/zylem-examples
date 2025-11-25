@@ -1,75 +1,171 @@
-import { stage, game, THREE, Perspectives } from '@tcool86/zylem';
 
-import { BoardSide } from './board';
-import { Paddle } from './paddle';
-import { Ball } from './ball';
+import {
+	game,
+	box,
+	sphere,
+	stage,
+	camera,
+	zone,
+	makeMoveable,
+	globalChanges,
+	text,
+	THREE,
+	ricochet2DInBounds,
+	ricochet2DCollision,
+	boundary2d,
+	Perspectives
+} from '@zylem/game-lib';
 
-const { Color, Vector2 } = THREE;
-const { Flat2D } = Perspectives;
-const paddle1 = Paddle(0, BoardSide.LEFT);
-const paddle2 = Paddle(1, BoardSide.RIGHT);
-const ball = Ball();
+const { Color, Vector3, Vector2 } = THREE;
 
-const stage1 = stage({
-	perspective: Flat2D,
-	backgroundColor: new Color(0, 0, 0),
-	conditions: [
-		{
-			bindings: ['p1Score', 'p2Score'],
-			callback: (globals, game) => {
-				const { p1Score, p2Score, winner } = globals;
-				if (p1Score.get() === 3) {
-					winner.set(1);
-				}
-				if (p2Score.get() === 3) {
-					winner.set(2);
-				}
-			}
-		}
-	],
-	setup: ({ HUD }) => {
-		HUD.addText('0', {
-			binding: 'p1Score',
-			update: (element, value) => {
-				element.updateText(value);
-			},
-			position: new Vector2(250, 10)
-		});
-		HUD.addText('0', {
-			binding: 'p2Score',
-			update: (element, value) => {
-				element.updateText(value);
-			},
-			position: new Vector2(850, 10)
-		});
-		HUD.addText('', {
-			binding: 'winner',
-			update: (element, value) => {
-				if (value === 0) {
-					return;
-				}
-				element.updateText(`Player ${value} wins!`);
-			},
-			position: new Vector2(450, 50)
-		})
-	},
-	children: () => {
-		return [
-			paddle1,
-			paddle2,
-			ball,
-		];
+const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
+
+const ball = await sphere({
+	name: 'ball',
+	position: new Vector3(0, 0, 0),
+	radius: 0.1,
+	color: new Color(Color.NAMES.lightgreen),
+});
+const moveableBall = makeMoveable(ball).onSetup(({ me }) => {
+	me.setPosition(0, 0, 0);
+	me.moveX(5);
+}).addBehaviors([
+	ricochet2DInBounds({ boundaries: gameBounds }, () => {
+		// ricochetSound();
+	}),
+	ricochet2DCollision({ collisionWith: { name: RegExp('paddle') } }, () => {
+		// pingPongBeep();
+	})
+]);
+
+const paddleSize = { x: 0.20, y: 1.5, z: 1 };
+const paddleMaterial = { color: new Color(Color.NAMES.lightblue) };
+const paddleSpeed = 5;
+
+const paddle1 = await box({
+	name: 'paddle1',
+	position: { x: -10, y: 0, z: 0 },
+	size: paddleSize,
+	material: paddleMaterial,
+});
+makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
+	const { Up, Down } = inputs.p1.directions;
+	const { Vertical } = inputs.p1.axes;
+	let value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
+	me.moveY(value * paddleSpeed);
+});
+paddle1.addBehavior(boundary2d({ boundaries: gameBounds }));
+
+const paddle2 = await box({
+	name: 'paddle2',
+	position: { x: 10, y: 0, z: 0 },
+	size: paddleSize,
+	material: paddleMaterial,
+});
+makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
+	const { Up, Down } = inputs.p2.directions;
+	const { Vertical } = inputs.p2.axes;
+	const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
+	me.moveY(value * paddleSpeed);
+});
+paddle2.addBehavior(boundary2d({ boundaries: gameBounds }));
+
+const p1Goal = await zone({
+	name: 'p1Goal',
+	position: { x: 12, y: 0, z: 0 },
+	size: new Vector3(2, 10, 1),
+});
+p1Goal.onEnter(({ visitor }) => {
+	const p1Score = game1.getGlobal('p1Score');
+	if (visitor.uuid === moveableBall.uuid) {
+		game1.setGlobal('p1Score', p1Score + 1);
+		moveableBall.setPosition(0, 0, 0);
+		moveableBall.moveXY(-5, 0);
 	}
 });
 
-const pong = game({
+const p2Goal = await zone({
+	name: 'p2Goal',
+	position: { x: -12, y: 0, z: 0 },
+	size: new Vector3(2, 10, 1),
+});
+p2Goal.onEnter(({ visitor }) => {
+	const p2Score = game1.getGlobal('p2Score');
+	if (visitor.uuid === moveableBall.uuid) {
+		game1.setGlobal('p2Score', p2Score + 1);
+		moveableBall.setPosition(0, 0, 0);
+		moveableBall.moveXY(5, 0);
+	}
+});
+
+const camera1 = camera({
+	position: new Vector3(0, 0, 0),
+	perspective: Perspectives.Fixed2D,
+	zoom: 12,
+});
+
+const p1Text = await text({
+	name: 'p1Text',
+	text: '0',
+	fontSize: 24,
+	stickToViewport: true,
+	screenPosition: new Vector2(window.innerWidth / 2 - 100, 24),
+});
+
+const p2Text = await text({
+	name: 'p2Text',
+	text: '0',
+	fontSize: 24,
+	stickToViewport: true,
+	screenPosition: new Vector2(window.innerWidth / 2 + 100, 24),
+});
+
+const winnerText = await text({
+	name: 'winnerText',
+	text: '',
+	fontSize: 36,
+	stickToViewport: true,
+	screenPosition: new Vector2(window.innerWidth / 2, window.innerHeight / 2),
+});
+
+const stage1 = stage({ variables: { screenBounces: 0 } }, camera1);
+const game1 = game({
 	id: 'pong',
+	debug: true,
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
-		winner: 0
+		winner: '',
 	},
-	stages: [stage1],
+	input: {
+		p1: { key: { w: ['directions.up'], s: ['directions.down'] } },
+		p2: { key: { ArrowUp: ['directions.up'], ArrowDown: ['directions.down'] } },
+	},
+}, stage1, ball, paddle1, paddle2, p1Goal, p2Goal, p1Text, p2Text, winnerText);
+
+const goalScore = 3;
+
+stage1.onUpdate(
+	globalChanges(['p1Score', 'p2Score'], ([p1, p2]) => {
+		if (p1 >= goalScore) game1.setGlobal('winner', 'p1');
+		if (p2 >= goalScore) game1.setGlobal('winner', 'p2');
+	}),
+);
+game1.onGlobalChange('winner', (value) => {
+	if (value === 'p1') {
+		winnerText.updateText('P1 Wins!');
+	} else if (value === 'p2') {
+		winnerText.updateText('P2 Wins!');
+	} else {
+		winnerText.updateText('');
+	}
 });
 
-pong.start();
+game1.onGlobalChange('p1Score', (value) => {
+	p1Text.updateText(String(value));
+});
+game1.onGlobalChange('p2Score', (value) => {
+	p2Text.updateText(String(value));
+});
+
+game1.start();

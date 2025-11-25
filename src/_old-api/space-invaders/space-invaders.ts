@@ -45,8 +45,8 @@ const spaceInvaders = game({
 		children: ({ globals }) => {
 			const { invaderCount } = globals;
 			const invaders: any[] = [];
-			for (let i = -8; i <= 8; i += 2) {
-				for (let j = 8; j >= 4; j -= 2) {
+			for (let i = -18; i <= 16; i += 2) {
+				for (let j = 0; j <= 8; j += 2) {
 					const invader = Invader(i, j);
 					invaders.push(invader);
 				}

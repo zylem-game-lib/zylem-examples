@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "@tcool86/zylem": {
+      "signature": "adec31e937681b51942bd839639370d9",
+      "file": true,
+      "replaced": "^0.1.29"
+    }
+  }
+}
