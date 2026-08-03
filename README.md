@@ -45,6 +45,7 @@ Published `@zylem/*` packages:
 - `@zylem/ui`
 - `@zylem/shaders`
 - `@zylem/assets`
+- `@zylem/bridge` (direct for Vite/pnpm resolution; also used transitively by game-lib/editor)
 
 Local engine iteration uses the polyrepo manager (`zw link`) against sibling checkouts under `zylem-projects/`.
 
