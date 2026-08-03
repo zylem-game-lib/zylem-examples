@@ -1,32 +1,80 @@
 {
-	"name": "zylem-examples",
-	"version": "0.0.11",
-	"description": "Example projects and demos showcasing the capabilities and usage of the Zylem library. Learn how to integrate and utilize the library effectively in your own interactive media projects.",
-	"author": {
-		"name": "Tim Cool",
-		"url": "https://www.timcool.me"
-	},
-	"scripts": {
-		"start": "npx http-server ./dist",
-		"dev": "vite",
-		"build": "vite build",
-		"serve": "vite preview"
-	},
-	"license": "MIT",
-	"devDependencies": {
-		"solid-devtools": "^0.27.9",
-		"typescript": "^5.5.3",
-		"vite": "^4.5.3",
-		"vite-plugin-solid": "^2.10.2"
-	},
-	"dependencies": {
-		"@dimforge/rapier3d-compat": "^0.11.2",
-		"@solidjs/router": "^0.13.6",
-		"@suid/icons-material": "^0.6.11",
-		"@suid/material": "^0.15.1",
-		"@suid/vite-plugin": "^0.1.5",
-		"@tcool86/zylem": "^0.1.29",
-		"solid-icons": "^1.1.0",
-		"solid-js": "^1.8.18"
-	}
+  "name": "@zylem/examples",
+  "private": true,
+  "version": "0.5.1",
+  "type": "module",
+  "description": "Example applications and playground for the Zylem game framework.",
+  "license": "MIT",
+  "author": "Tim Cool",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zylem-game-lib/zylem-examples.git"
+  },
+  "homepage": "https://github.com/zylem-game-lib/zylem-examples#readme",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.32.1"
+  },
+  "scripts": {
+    "dev": "vite --host",
+    "build": "cross-env NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "optimize:gltf": "node ./repo-actions/optimize-gltf-assets.mjs",
+    "test:e2e": "playwright test",
+    "screenshot": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./repo-actions/screenshot.ts",
+    "screenshot:local": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./repo-actions/screenshot-local.ts",
+    "server:install": "pnpm install --dir server/spacetimedb",
+    "server:build": "pnpm run server:install && sh server/scripts/run-spacetimedb-cli.sh build -p server/spacetimedb",
+    "server:generate:bindings": "sh server/scripts/run-spacetimedb-cli.sh generate --lang typescript -o src/demos/multiplayer-lobby/spacetimedb-generated -p server/spacetimedb -y",
+    "server:publish:arena": "sh server/scripts/run-spacetimedb-cli.sh publish arena -s local -p server/spacetimedb",
+    "server:publish:multiplayer-lobby": "sh server/scripts/run-spacetimedb-cli.sh publish multiplayer-lobby -s local -p server/spacetimedb",
+    "server:publish:local": "pnpm run server:publish:arena && pnpm run server:publish:multiplayer-lobby",
+    "server:start": "bash server/scripts/start-spacetimedb-server.sh",
+    "server:dev": "pnpm run server:build && pnpm run server:publish:local",
+    "render:build": "bash scripts/render-build.sh"
+  },
+  "dependencies": {
+    "@dgreenheck/three-pinata": "^2.0.1",
+    "@solidjs/router": "^0.14.10",
+    "@zylem/assets": "^0.1.1",
+    "@zylem/behaviors": "^0.5.8",
+    "@zylem/bridge": "^0.1.1",
+    "@zylem/editor": "^0.6.9",
+    "@zylem/game-lib": "^0.8.3",
+    "@zylem/shaders": "^0.1.2",
+    "@zylem/ui": "^0.2.0",
+    "comlink": "^4.4.2",
+    "howler": "^2.2.4",
+    "nanoid": "^5.1.5",
+    "solid-js": "^1.9.9",
+    "spacetimedb": "2.1.0",
+    "three": "^0.185.0",
+    "valtio": "^2.1.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^20.19.13",
+    "@types/three": "^0.185.0",
+    "@vanilla-extract/css": "^1.20.1",
+    "@vanilla-extract/sprinkles": "^1.6.5",
+    "@vanilla-extract/vite-plugin": "^5.2.2",
+    "cross-env": "^10.1.0",
+    "typescript": "6.0.3",
+    "vite": "7.0.4",
+    "vite-plugin-glsl": "^1.5.4",
+    "vite-plugin-solid": "^2.11.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "three": "0.185.1",
+      "@types/three": "0.185.1",
+      "@dimforge/rapier3d-compat": "0.11.2"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract"
+    ]
+  },
+  "packageManager": "pnpm@10.33.0"
 }

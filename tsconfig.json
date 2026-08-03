@@ -1,19 +1,27 @@
 {
-	"compilerOptions": {
-		"strict": true,
-		"target": "ESNext",
-		"module": "ESNext",
-		"moduleResolution": "Node",
-		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
-		"jsxImportSource": "solid-js",
-		"types": ["vite/client"],
-		"allowJs": false,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"isolatedModules": true,
-		"noEmit": true,
-		"jsx": "preserve"
-	}
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node", "vite/client", "vite-plugin-glsl/ext"],
+    "paths": {
+      "@examples/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "repo-actions", "vite.config.ts", "index.html"],
+  "exclude": ["node_modules", "dist", "server/spacetimedb/dist", "server/spacetimedb/node_modules"]
 }
