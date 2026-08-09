@@ -2,7 +2,7 @@
 
 Example applications and playground for the [Zylem](https://github.com/zylem-game-lib/zylem) game framework.
 
-Live demos: [https://zylem.onrender.com](https://zylem.onrender.com)
+Live demos: [https://zylem-examples.onrender.com/](https://zylem-examples.onrender.com/)
 
 This repository replaces the older showcase that was pinned to `@zylem/game-lib@0.3.16`. It now ships the current demos suite plus the SpacetimeDB multiplayer server used by the multiplayer lobby example.
 
@@ -51,15 +51,15 @@ Local engine iteration uses the polyrepo manager (`zw link`) against sibling che
 
 ## Scripts
 
-| Script | Description |
-| --- | --- |
-| `pnpm dev` | Vite playground |
-| `pnpm build` | Production SPA → `dist/` |
-| `pnpm test:e2e` | Playwright e2e |
-| `pnpm screenshot:local` | Capture demo screenshots |
-| `pnpm server:start` | Start SpacetimeDB |
-| `pnpm server:dev` | Build + publish local modules |
-| `pnpm render:build` | Render static-site build |
+| Script                  | Description                   |
+| ----------------------- | ----------------------------- |
+| `pnpm dev`              | Vite playground               |
+| `pnpm build`            | Production SPA → `dist/`      |
+| `pnpm test:e2e`         | Playwright e2e                |
+| `pnpm screenshot:local` | Capture demo screenshots      |
+| `pnpm server:start`     | Start SpacetimeDB             |
+| `pnpm server:dev`       | Build + publish local modules |
+| `pnpm render:build`     | Render static-site build      |
 
 ## Deploy (Render)
 

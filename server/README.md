@@ -90,7 +90,7 @@ The Render setup assumes:
 
 `SPACETIMEDB_HTTP_ADDR=127.0.0.1:3000` (see [render.yaml](../../render.yaml)) is intentional: SpacetimeDB listens only on the container loopback, so nothing off-machine can reach port 3000 directly. [nginx](render/nginx.conf.template) listens on `PORT` and reverse-proxies `/v1/*` (SpacetimeDB HTTP + WebSocket API) to that loopback address. The API your **browsers** use is therefore the service’s **public HTTPS origin** (`https://<your-service>.onrender.com`), which becomes **`wss://`** for the subscribe WebSocket—**not** `http://127.0.0.1:3000` or `:3000` on the host.
 
-For **production builds** of `@zylem/examples` deployed **separately** (e.g. Render static site pointing at this service), set **`VITE_STDB_URI`** to the SpacetimeDB public URL, e.g. `https://<your-render-service>.onrender.com`. When the examples app is **served from the same Docker image** as SpacetimeDB, you can omit `VITE_STDB_URI`; the client uses `window.location.origin` so API and UI share one origin. See [./.env.production.example](../examples/.env.production.example).
+For **production builds** of `@zylem/examples` deployed **separately** (e.g. Render static site pointing at this service), set **`VITE_STDB_URI`** to the SpacetimeDB public URL, e.g. `https://<your-render-service>.onrender.com`. When the examples app is **served from the same Docker image** as SpacetimeDB, you can omit `VITE_STDB_URI`; the client uses `window.location.origin` so API and UI share one origin. See [./.env.production.example](../.env.production.example).
 
 ### Import into Render
 

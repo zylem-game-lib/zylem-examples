@@ -115,14 +115,23 @@ export default defineConfig({
 	},
 	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb', '**/*.wasm'],
 	optimizeDeps: {
-		// @zylem/ui/components resolves to TypeScript source; keep it out of
-		// esbuild prebundling (which would apply the React JSX transform) so
-		// vite-plugin-solid compiles it instead.
+		// Solid JSX packages must stay out of esbuild prebundling. esbuild
+		// applies the React JSX transform by default, which turns lucide-solid
+		// / @kobalte icons into `React.createElement(...)` and crashes the
+		// editor with `React is not defined` when the panel opens.
+		// @zylem/ui ships TSX source; @zylem/editor pulls lucide-solid (via the
+		// `solid` export condition → `dist/source/*.jsx`) and @kobalte/core.
 		// @zylem/behaviors and @zylem/runtime are excluded so the runtime's
 		// `new URL('./zylem_runtime.wasm', import.meta.url)` keeps resolving
 		// next to the real module instead of vite's prebundle cache, and so
 		// behaviors' nested @zylem/runtime file: dep resolves correctly.
-		exclude: ['@zylem/ui', '@zylem/behaviors', '@zylem/runtime'],
+		exclude: [
+			'@zylem/ui',
+			'@zylem/editor',
+			'lucide-solid',
+			'@zylem/behaviors',
+			'@zylem/runtime',
+		],
 	},
 	server: {
 		port: Number.isFinite(devPort) ? devPort : 3331,

@@ -7,7 +7,7 @@
  * one-shot `dumpPerfSnapshot(game)` helper for ad-hoc inspection from
  * DevTools.
  *
- * This intentionally lives in `packages/examples` (not `@zylem/game-lib`)
+ * This intentionally lives in `@zylem/examples` (not `@zylem/game-lib`)
  * because it reads private/internal fields of the engine wrapper to avoid
  * forcing public-API churn:
  *

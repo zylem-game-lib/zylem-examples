@@ -66,7 +66,7 @@ export function normalizeSpacetimeClientUri(uri: string): string {
     u = new URL(trimmed);
   } catch {
     throw new Error(
-      `Invalid SpacetimeDB URI "${uri}". Use an absolute URL such as https://your-spacetimedb-service.onrender.com (see packages/examples/.env.production.example).`,
+      `Invalid SpacetimeDB URI "${uri}". Use an absolute URL such as https://your-spacetimedb-service.onrender.com (see .env.production.example).`,
     );
   }
 

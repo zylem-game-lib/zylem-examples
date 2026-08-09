@@ -32,7 +32,7 @@ importers:
         specifier: ^0.6.9
         version: 0.6.9(@zylem/game-lib@0.8.3(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2))
       '@zylem/game-lib':
-        specifier: ^0.8.3
+        specifier: link:../zylem/packages/game-lib
         version: 0.8.3(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2)
       '@zylem/shaders':
         specifier: ^0.1.2
@@ -71,6 +71,9 @@ importers:
       '@types/three':
         specifier: 0.185.1
         version: 0.185.1
+      '@types/tsl-textures':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@vanilla-extract/css':
         specifier: ^1.20.1
         version: 1.21.2
@@ -952,6 +955,9 @@ packages:
 
   '@types/three@0.185.1':
     resolution: {integrity: sha512-db1xTb+EgYF2didW+eudSvVPtn75zo+fGsY8ShQrJY/B5ZBmC2Fiaykv3aImHAlCNEGuMPkPGXBJGLwzu5mC7A==}
+
+  '@types/tsl-textures@3.0.0':
+    resolution: {integrity: sha512-sLNxOhgp/RXPkeML51CoRL29fIUFQkIZ1D9Fd+IaUSrzak7HH9dp4mV9Vx4k8wcdQCVzgWcZMTTgfxQEbMF1AQ==}
 
   '@types/webxr@0.5.24':
     resolution: {integrity: sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==}
@@ -2319,6 +2325,10 @@ snapshots:
       '@types/webxr': 0.5.24
       fflate: 0.8.3
       meshoptimizer: 1.1.1
+
+  '@types/tsl-textures@3.0.0':
+    dependencies:
+      '@types/three': 0.185.1
 
   '@types/webxr@0.5.24': {}
 
