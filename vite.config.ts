@@ -4,7 +4,7 @@ import solidPlugin from 'vite-plugin-solid';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { zylemVersionsPlugin } from './vite-plugins/zylem-versions-plugin.ts';
+import { zylemVersionsPlugin } from '@zylem/ui/vite';
 import { Agent } from 'https';
 import { Resolver } from 'dns';
 
