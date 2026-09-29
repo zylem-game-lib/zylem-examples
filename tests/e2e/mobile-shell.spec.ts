@@ -54,10 +54,12 @@ test.describe('mobile examples shell', () => {
 		const editor = page.locator('zylem-editor');
 
 		await page.locator('[data-mobile-editor-button]').click();
-		await expect(editor.getByText('Zylem Editor')).toBeVisible();
+		await expect(editor.getByText('Game')).toBeVisible();
 
-		await editor.locator('[data-testid="floating-panel-close"]').click();
-		await expect(editor.getByText('Zylem Editor')).not.toBeVisible();
+		const closeButtons = editor.locator('[data-testid="floating-panel-close"]');
+		await closeButtons.first().click();
+		await closeButtons.first().click();
+		await expect(editor.getByText('Game')).toHaveCount(0);
 	});
 
 	test('loads direct demo routes with the drawer closed', async ({ page }) => {
