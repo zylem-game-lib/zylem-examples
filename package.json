@@ -42,7 +42,7 @@
     "@zylem/behaviors": "^0.5.8",
     "@zylem/bridge": "^0.1.1",
     "@zylem/editor": "^0.6.9",
-    "@zylem/game-lib": "^0.8.8",
+    "@zylem/game-lib": "^0.9.4",
     "@zylem/shaders": "^0.1.2",
     "@zylem/ui": "^0.2.0",
     "comlink": "^4.4.2",
