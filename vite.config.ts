@@ -4,7 +4,10 @@ import solidPlugin from 'vite-plugin-solid';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { zylemVersionsPlugin } from '@zylem/ui/vite';
+// Relative path so Vite's config bundler inlines the plugin. A package
+// import of `@zylem/ui/vite` is externalized, and Node refuses to strip
+// TypeScript that lives under node_modules.
+import { zylemVersionsPlugin } from './node_modules/@zylem/ui/vite/index.ts';
 import { Agent } from 'https';
 import { Resolver } from 'dns';
 

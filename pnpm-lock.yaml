@@ -26,11 +26,11 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8(three@0.185.1)
       '@zylem/bridge':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.9.4
+        version: 0.9.4
       '@zylem/editor':
-        specifier: ^0.6.9
-        version: 0.6.9(@zylem/game-lib@0.9.4(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2))
+        specifier: ^0.9.4
+        version: 0.9.4(@zylem/game-lib@0.9.4(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2))
       '@zylem/game-lib':
         specifier: ^0.9.4
         version: 0.9.4(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2)
@@ -38,8 +38,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2(three@0.185.1)
       '@zylem/ui':
-        specifier: ^0.2.0
-        version: 0.2.3(solid-js@1.9.14)
+        specifier: ^0.8.13
+        version: 0.8.13(solid-js@1.9.14)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -1007,16 +1007,14 @@ packages:
     peerDependencies:
       three: 0.185.1
 
-  '@zylem/bridge@0.1.1':
-    resolution: {integrity: sha512-xAI+KAgyYTf5KkxbH7Ew6uWyE3mKQ6U+BrrKLt7caXyK5c2rd0E6gSigcfH7XyU1LxcTvHacynFo2UBJ7Yp0Zw==}
-
   '@zylem/bridge@0.9.4':
     resolution: {integrity: sha512-Txkre/yEdH+s1L4t5yh+ctXuOAE/3PARcPkSE6JCTtuLFcq0BKUdD0+zFcian4Rynt1YQ/qCojqkuiUvexnAng==}
 
-  '@zylem/editor@0.6.9':
-    resolution: {integrity: sha512-4W5lWX2FnME2MJ7/gnK6hxuRlBoyYkV7iDDBLCkjyZeOn+XzgDeBJyhi+fgkW5lqjQXQh8pQ+jH26X9D3MCeCA==}
+  '@zylem/editor@0.9.4':
+    resolution: {integrity: sha512-pXs0wEL+/ww764DelGIcJbEiOmvfQZWszao3QtGY9y1pGiIrszIlpvjPxtAew4Gm/TQzvlRjv+eR2SCljs15Jw==}
+    engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
-      '@zylem/game-lib': ^0.8.3
+      '@zylem/game-lib': ^0.9.4
 
   '@zylem/game-lib@0.9.4':
     resolution: {integrity: sha512-FQKwT+LXKz+T5i80Oo7yTPxXXSDH7QET31PProY9tiC8QQ20EbGwfYyLTfPXbdIi2DwrHSwTzj+p+AFXNv+/6w==}
@@ -1039,8 +1037,8 @@ packages:
     peerDependencies:
       three: 0.185.1
 
-  '@zylem/ui@0.2.3':
-    resolution: {integrity: sha512-X56pXbjjXILswT5t5ZllbWiBPeLoTgck/nuKh/OsHGEAiBiRdFSGcPbCvP7jGmL0Wunokv2qosIoRiZtNMrM7g==}
+  '@zylem/ui@0.8.13':
+    resolution: {integrity: sha512-yrN/IFSxngzLJTOvF17f2zDM4hVvL5dOk/C2YkzB0EI6QxtUHWDclTXQO5X6RniVEmIuRfPvnuCkr4df3lr9Pg==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       solid-js: ^1.9.9
@@ -1323,6 +1321,11 @@ packages:
 
   lucide-solid@0.511.0:
     resolution: {integrity: sha512-0Fmpc7+nyiDckSG1QoCj1w6qy7X5oe8Vhr/XZwsVwWYqXLXoHtGh5L8MYvJ8ivhSu4/oDKHe6MNuj/3gRSj3OA==}
+    peerDependencies:
+      solid-js: ^1.4.7
+
+  lucide-solid@1.55.0:
+    resolution: {integrity: sha512-lrbKmv1Gs0O6bGUIZJ/xNgl1KqtKDUBQw2RL66zuyKSySoh8RH2TLohYLwCs08bHzsCXaGuxmKt5nt/3yCpHEw==}
     peerDependencies:
       solid-js: ^1.4.7
 
@@ -2475,18 +2478,16 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/bridge@0.1.1': {}
-
   '@zylem/bridge@0.9.4': {}
 
-  '@zylem/editor@0.6.9(@zylem/game-lib@0.9.4(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2))':
+  '@zylem/editor@0.9.4(@zylem/game-lib@0.9.4(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2))':
     dependencies:
       '@kobalte/core': 0.13.14(solid-js@1.9.14)
       '@solidjs/router': 0.14.10(solid-js@1.9.14)
-      '@zylem/bridge': 0.1.1
+      '@zylem/bridge': 0.9.4
       '@zylem/game-lib': 0.9.4(howler@2.2.4)(nanoid@5.1.16)(three@0.185.1)(valtio@2.3.2)
-      '@zylem/ui': 0.2.3(solid-js@1.9.14)
-      lucide-solid: 0.511.0(solid-js@1.9.14)
+      '@zylem/ui': 0.8.13(solid-js@1.9.14)
+      lucide-solid: 1.55.0(solid-js@1.9.14)
       solid-js: 1.9.14
       valtio: 2.3.2
     transitivePeerDependencies:
@@ -2524,7 +2525,7 @@ snapshots:
       three: 0.185.1
       tsl-textures: 3.0.4
 
-  '@zylem/ui@0.2.3(solid-js@1.9.14)':
+  '@zylem/ui@0.8.13(solid-js@1.9.14)':
     dependencies:
       '@kobalte/core': 0.13.14(solid-js@1.9.14)
       '@vanilla-extract/css': 1.21.2
@@ -2778,6 +2779,10 @@ snapshots:
       yallist: 3.1.1
 
   lucide-solid@0.511.0(solid-js@1.9.14):
+    dependencies:
+      solid-js: 1.9.14
+
+  lucide-solid@1.55.0(solid-js@1.9.14):
     dependencies:
       solid-js: 1.9.14
 
