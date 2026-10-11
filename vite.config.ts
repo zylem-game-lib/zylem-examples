@@ -145,8 +145,7 @@ export default defineConfig({
 			// (game-lib / behaviors / runtime / shaders).
 			allow: [
 				path.resolve(__dirname),
-				path.resolve(__dirname, '../behaviors'),
-				path.resolve(__dirname, '../runtime'),
+				path.resolve(__dirname, '../simulation'),
 				path.resolve(__dirname, '../zylem'),
 				path.resolve(__dirname, '../shaders'),
 			],
