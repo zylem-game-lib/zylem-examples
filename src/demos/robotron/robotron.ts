@@ -1,10 +1,26 @@
-import { Color, Vector2, Vector3 } from 'three';
-import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
-import { createSprite, createText, destroy, TEXT_TYPE } from '@zylem/game-lib/entity';
-import { mergeInputConfigs, useArrowsForSecondaryAxes, useWASDForAxes } from '@zylem/game-lib/input';
-import { ScreenWrapBehavior, Shooter2DBehavior, TopDownMovementBehavior, TopDownShooterCoordinator, useBehavior } from '@zylem/game-lib/behavior';
+import { callFunc, delay, sequence } from '@zylem/game-lib/actions';
+import {
+  ScreenWrapBehavior,
+  Shooter2DBehavior,
+  TopDownMovementBehavior,
+  TopDownShooterCoordinator,
+} from '@zylem/game-lib/behavior';
+import {
+  createCamera,
+  createGame,
+  createStage,
+  Perspectives,
+} from '@zylem/game-lib/core';
+import { createSprite, createText, destroy } from '@zylem/game-lib/entity';
 import { setGlobal } from '@zylem/game-lib/globals';
+import {
+  mergeInputConfigs,
+  useArrowsForSecondaryAxes,
+  useWASDForAxes,
+} from '@zylem/game-lib/input';
+import { Color } from 'three';
 import { demoAsset } from '../../assets/manifest';
+import { withBehavior } from '../_shared/behavior';
 
 const playerShipImg = demoAsset('general/space/player-ship.png');
 const enemyShipImg = demoAsset('general/space/enemy-ship.png');
@@ -13,8 +29,8 @@ const playerLaserImg = demoAsset('general/space/player-laser.png');
 export default function createDemo() {
   const PLAYFIELD_WIDTH = 28;
   const PLAYFIELD_HEIGHT = 18;
-  const BULLET_BOUNDS_X = PLAYFIELD_WIDTH * 0.5 + 2;
-  const BULLET_BOUNDS_Y = PLAYFIELD_HEIGHT * 0.5 + 2;
+  let finished = false;
+  const defeated = new Set<string>();
   const ENEMY_SPEED = 2.4;
   const PLAYER_SPEED = 8.5;
 
@@ -27,32 +43,35 @@ export default function createDemo() {
       size: { x: 0.35, y: 0.75, z: 1 },
     });
 
-    bullet.onUpdate(({ me }) => {
-      const position = me.getPosition();
-      if (!position) return;
+    bullet.runAction(
+      sequence(
+        delay(1500),
+        callFunc(() => destroy(bullet)),
+      ),
+    );
 
-      if (
-        Math.abs(position.x) > BULLET_BOUNDS_X ||
-        Math.abs(position.y) > BULLET_BOUNDS_Y
-      ) {
-        destroy(me);
-      }
-    });
+    bullet.onCollision(
+      ({ entity, other, globals }) => {
+        if (
+          finished ||
+          other.name !== 'robotron-enemy' ||
+          defeated.has(other.uuid)
+        ) {
+          return;
+        }
 
-    bullet.onCollision(({ entity, other, globals }) => {
-      if (other.name !== 'robotron-enemy') {
-        return;
-      }
-
-      destroy(entity);
-      destroy(other);
-      setGlobal('score', (globals.score as number) + 25);
-    });
+        defeated.add(other.uuid);
+        destroy(entity);
+        destroy(other);
+        setGlobal('score', (globals.score as number) + 25);
+      },
+      { phase: 'enter' },
+    );
 
     return bullet;
   }
 
-  function createEnemy(index: number, player: any) {
+  function createEnemy(index: number, player: ReturnType<typeof createSprite>) {
     const enemy = createSprite({
       name: 'robotron-enemy',
       images: [{ name: `robotron-enemy-${index}`, file: enemyShipImg }],
@@ -70,6 +89,10 @@ export default function createDemo() {
     });
 
     enemy.onUpdate(({ me }) => {
+      if (finished) {
+        me.resetVelocity();
+        return;
+      }
       const playerPosition = player.getPosition();
       const enemyPosition = me.getPosition();
       if (!playerPosition || !enemyPosition) {
@@ -99,7 +122,7 @@ export default function createDemo() {
     position: { x: 0, y: 0, z: 0 },
   });
 
-  const player = useBehavior(basePlayer, TopDownMovementBehavior, {
+  const player = withBehavior(basePlayer, TopDownMovementBehavior, {
     moveSpeed: PLAYER_SPEED,
   });
 
@@ -140,18 +163,20 @@ export default function createDemo() {
     stage,
   );
 
-  player.onUpdate(({ delta, inputs }) => {
+  player.onUpdate(({ me, delta, inputs }) => {
+    if (finished) {
+      me.$topDownMovement.moveX = 0;
+      me.$topDownMovement.moveY = 0;
+      me.resetVelocity();
+      return;
+    }
     playerInvulnerabilityMs = Math.max(
       0,
       playerInvulnerabilityMs - delta * 1000,
     );
 
-    const {
-      Horizontal,
-      Vertical,
-      SecondaryHorizontal,
-      SecondaryVertical,
-    } = inputs.p1.axes;
+    const { Horizontal, Vertical, SecondaryHorizontal, SecondaryVertical } =
+      inputs.p1.axes;
     const aimX = SecondaryHorizontal.value;
     const aimY = -SecondaryVertical.value;
     playerCoordinator.update({
@@ -165,7 +190,11 @@ export default function createDemo() {
   });
 
   player.onCollision(({ entity, other, globals }) => {
-    if (other.name !== 'robotron-enemy' || playerInvulnerabilityMs > 0) {
+    if (
+      finished ||
+      other.name !== 'robotron-enemy' ||
+      playerInvulnerabilityMs > 0
+    ) {
       return;
     }
 
@@ -207,15 +236,19 @@ export default function createDemo() {
     scoreText,
     livesText,
   )
-    .onGlobalChange<number>('score', (score, currentStage) => {
-      currentStage
-        ?.getEntityByName('robotronScore', TEXT_TYPE)
-        ?.updateText(`Score: ${score}`);
+    .onGlobalChange<number>('score', (score) => {
+      const cleared = defeated.size === enemies.length;
+      finished ||= cleared;
+      if (finished && !cleared) return;
+      scoreText.updateText(
+        finished ? 'Arena cleared! — R to restart' : `Score: ${score}`,
+      );
     })
-    .onGlobalChange<number>('lives', (lives, currentStage) => {
-      currentStage
-        ?.getEntityByName('robotronLives', TEXT_TYPE)
-        ?.updateText(`Lives: ${lives}`);
+    .onGlobalChange<number>('lives', (lives) => {
+      finished ||= lives === 0;
+      livesText.updateText(
+        finished ? 'Game over — R to restart' : `Lives: ${lives}`,
+      );
     });
 
   return game;

@@ -35,18 +35,18 @@ test.describe('mobile examples shell', () => {
 
 		const search = page.locator('[data-mobile-demo-search]');
 		await expect(search).toBeVisible();
-		await search.fill('empty');
+		await search.fill('basic');
 
-		const emptyGameTile = page.locator('[data-mobile-demo-card="20-empty-game"]');
+		const emptyGameTile = page.locator('[data-mobile-demo-card="basic"]');
 		await expect(emptyGameTile).toBeVisible();
 		await emptyGameTile.click();
 
-		await expect(page).toHaveURL(/\/demos\/empty-game$/);
+		await expect(page).toHaveURL(/\/demos\/basic$/);
 		await expect(drawer).toHaveAttribute('data-state', 'closed');
 
 		await demoButton.click();
 		await expect(drawer).toHaveAttribute('data-state', 'open');
-		await page.locator('[data-mobile-demo-card="20-empty-game"]').click();
+		await page.locator('[data-mobile-demo-card="basic"]').click();
 		await expect(drawer).toHaveAttribute('data-state', 'closed');
 	});
 
@@ -63,12 +63,14 @@ test.describe('mobile examples shell', () => {
 	});
 
 	test('loads direct demo routes with the drawer closed', async ({ page }) => {
-		await page.goto('/demos/empty-game');
+		await page.goto('/demos/basic');
 
 		await expect(page.locator('[data-mobile-demo-drawer]')).toHaveAttribute(
 			'data-state',
 			'closed',
 		);
-		await expect(page.locator('zylem-game[data-demo-id="20-empty-game"]')).toBeVisible();
+		await expect(
+			page.locator('zylem-game[data-demo-id="basic"]'),
+		).toBeVisible();
 	});
 });

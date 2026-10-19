@@ -1,238 +1,129 @@
-import { Color, Vector3 } from 'three';
-import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
-import { createBox, createSphere, createZone, createText, destroy } from '@zylem/game-lib/entity';
-import { setGlobal } from '@zylem/game-lib/globals';
 import { ricochetSound } from '@zylem/game-lib/audio';
-import { WorldBoundary2DBehavior, Ricochet2DBehavior, BoundaryRicochetCoordinator } from '@zylem/game-lib/behavior';
+import {
+	BoundaryRicochetCoordinator,
+	Ricochet2DBehavior,
+	WorldBoundary2DBehavior,
+} from '@zylem/game-lib/behavior';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import {
+	createBox,
+	createSphere,
+	createText,
+	destroy,
+} from '@zylem/game-lib/entity';
+import { Color } from 'three';
+import { ricochetEntity } from '../_shared/behavior';
+import { movementControls } from '../_shared/controls';
 
 export default function createDemo() {
-	const board = { top: 10, bottom: -10, left: -12, right: 12 };
-
-	const paddleSize = new Vector3(4, 0.6, 1);
-	const paddleSpeed = 12;
-
+	let lives = 3;
+	let score = 0;
+	let finished = false;
+	const removed = new Set<string>();
+	const label = createText({
+		text: 'Score: 0 · Lives: 3',
+		screenPosition: { x: 0.5, y: 0.05 },
+	});
 	const paddle = createBox({
 		name: 'paddle',
-		position: { x: 0, y: -9, z: 0 },
-		size: paddleSize,
-		material: { color: new Color('#ffffff') },
+		position: [0, -8, 0],
+		size: [3, 0.5, 1],
 	});
-
-	const paddleBoundary = paddle.use(WorldBoundary2DBehavior, {
-		boundaries: board,
+	const paddleBounds = paddle.use(WorldBoundary2DBehavior, {
+		boundaries: { left: -9.5, right: 9.5, top: 10, bottom: -10 },
 	});
+	paddle.onUpdate(({ me, inputs }) =>
+		me.moveX(
+			paddleBounds.getMovement(
+				finished ? 0 : inputs.p1.axes.Horizontal.value * 12,
+				0,
+			).moveX,
+		),
+	);
 
-	paddle.onUpdate(({ me, inputs }) => {
-		const { Left, Right } = inputs.p1.directions;
-		const { Horizontal } = inputs.p1.axes;
-		const value =
-			(Right.held ? 1 : 0) - (Left.held ? 1 : 0) || Horizontal.value;
-		let moveX = value * paddleSpeed;
-
-		// Constrain movement to boundaries
-		({ moveX } = paddleBoundary.getMovement(moveX, 0));
-		me.moveX(moveX);
-	});
-
-	const ballRadius = 0.25;
 	const ball = createSphere({
 		name: 'ball',
-		radius: ballRadius,
-		material: { color: new Color(Color.NAMES.lightgreen) },
+		radius: 0.25,
+		color: new Color('#8ee6a1'),
 	});
-
-	// Attach ricochet behavior for reflections
-	const ballRicochet = ball.use(Ricochet2DBehavior, {
-		minSpeed: 3,
-		maxSpeed: 25,
-		speedMultiplier: 1.0,
+	const bounce = ball.use(Ricochet2DBehavior, {
+		minSpeed: 8,
+		maxSpeed: 14,
 		reflectionMode: 'angled',
 		maxAngleDeg: 60,
 	});
-
-	// Attach boundary behavior for wall detection
-	const ballBoundary = ball.use(WorldBoundary2DBehavior, {
-		boundaries: board,
+	// The lower boundary is outside play: missing the paddle costs a life.
+	const bounds = ball.use(WorldBoundary2DBehavior, {
+		boundaries: { left: -11, right: 11, top: 9, bottom: -100 },
 	});
-
-	ball.onSetup(({ me }) => {
-		me.setPosition(0, -7, 0);
-		me.moveXY(0, 8);
-	});
-
-	ballRicochet.onRicochet(() => {
-		ricochetSound(900, 0.04);
-	});
-
-	const ballCoordinator = new BoundaryRicochetCoordinator(
-		ball as any,
-		ballBoundary,
-		ballRicochet,
+	const walls = new BoundaryRicochetCoordinator(
+		ricochetEntity(ball),
+		bounds,
+		bounce,
+	);
+	const bricks = Array.from({ length: 32 }, (_, index) =>
+		createBox({
+			name: 'brick',
+			size: [2.2, 0.6, 1],
+			position: [-9.1 + (index % 8) * 2.6, 6 - Math.floor(index / 8) * 1.2, 0],
+			collision: { static: true },
+			color: new Color().setHSL(Math.floor(index / 8) * 0.1, 0.7, 0.6),
+		}),
 	);
 
-	ball.onUpdate(() => {
-		ballCoordinator.update();
-	});
-
-	// Handle brick collisions
-	ball.onCollision(({ entity, other, globals }) => {
-		if (other.name !== 'brick') return;
-
-		// Apply ricochet with entities (automatic normal and size detection)
-		ballRicochet.applyRicochet({
-			entity,
-			otherEntity: other,
-			contact: {},
-		});
-
-		// Update score and destroy brick
-		const remaining = (globals.bricksRemaining as number) - 1;
-		setGlobal('bricksRemaining', remaining);
-		setGlobal('score', (globals.score as number) + 100);
-		destroy(other);
-	});
-
-	// Handle paddle collisions
-	ball.onCollision(({ entity, other }) => {
-		if (other.name !== 'paddle') return;
-
-		// Use angled reflection for paddle (force upward normal)
-		ballRicochet.applyRicochet({
-			entity,
-			otherEntity: other,
-			otherSize: paddleSize,
-			contact: { normal: { x: 0, y: 1 } },
-		});
-	});
-
-	const failZone = createZone({
-		name: 'failZone',
-		position: { x: 0, y: board.bottom - 1, z: 0 },
-		size: { x: board.right - board.left + 10, y: 2, z: 1 },
-	});
-
-	failZone.onEnter(({ visitor, globals }) => {
-		if (visitor.uuid === ball.uuid) {
-			if ((globals.lives as number) > 0) {
-				setGlobal('lives', (globals.lives as number) - 1);
-			}
-			if ((globals.lives as number) !== 0) {
-				ball.setPosition(0, -7, 0);
-				ball.moveXY(0, 8);
-			}
-		}
-	});
-
-	const brickRows = 4;
-	const brickCols = 10;
-	const brickSize = new Vector3(2, 0.6, 1);
-	const brickStartY = 6;
-	const brickGap = 0.4;
-	const bricks = [] as any[];
-
-	for (let r = 0; r < brickRows; r++) {
-		for (let c = 0; c < brickCols; c++) {
-			const x = board.left + 2 + c * (brickSize.x + brickGap);
-			const y = brickStartY - r * (brickSize.y + 0.6);
-			const color = new Color().setHSL(0.02 + r * 0.08, 0.8, 0.5);
-			const b = createBox({
-				name: 'brick',
-				size: brickSize,
-				position: { x: x, y: y, z: 0 },
-				material: { color },
-				collision: { static: true },
-			});
-			bricks.push(b);
-		}
+	function serve() {
+		ball.setPosition(0, -6, 0);
+		ball.moveXY(2, 8);
 	}
-
-	const camera1 = createCamera({
-		position: { x: 0, y: 0, z: 0 },
-		perspective: 'fixed-2d',
-		zoom: 24,
-	});
-
-	const scoreText = createText({
-		name: 'scoreText',
-		text: 'Score: 0',
-		fontSize: 20,
-		stickToViewport: true,
-		screenPosition: { x: 0.1, y: 0.05 },
-	});
-
-	const livesText = createText({
-		name: 'livesText',
-		text: 'Lives: 3',
-		fontSize: 20,
-		stickToViewport: true,
-		screenPosition: { x: 0.9, y: 0.05 },
-	});
-
-	const statusText = createText({
-		name: 'statusText',
-		text: '',
-		fontSize: 32,
-		stickToViewport: true,
-		screenPosition: { x: 0.5, y: 0.5 },
-	});
-
-	const stage1 = createStage({}, camera1);
-	const game = createGame(
-		{
-			id: 'breakout',
-			debug: true,
-			globals: {
-				score: 0,
-				lives: 3,
-				bricksRemaining: bricks.length,
-				status: '',
-			},
-			input: {
-				p1: {
-					key: {
-						ArrowLeft: ['directions.left'],
-						ArrowRight: ['directions.right'],
-						a: ['directions.left'],
-						d: ['directions.right'],
-					},
-				},
-			},
-		},
-		stage1,
-		paddle,
-		ball,
-		failZone,
-		scoreText,
-		livesText,
-		statusText,
-		...bricks,
-	);
-
-	game.onGlobalChanges<[number, number]>(
-		['bricksRemaining', 'lives'],
-		([remaining, lives]) => {
-			if (remaining <= 0) setGlobal('status', 'win');
-			if (lives <= 0) setGlobal('status', 'lose');
-		},
-	);
-
-	game.onGlobalChange<string>('status', value => {
-		if (value === 'win') statusText.updateText('You Win!');
-		else if (value === 'lose') statusText.updateText('Game Over');
-		else statusText.updateText('');
-		if (value === 'win' || value === 'lose') {
-			ball.setPosition(0, -2, 0);
-			ball.moveXY(0, 0);
+	function showScore() {
+		finished = lives === 0 || removed.size === bricks.length;
+		label.updateText(
+			finished
+				? `${lives ? 'You win!' : 'Game over'} · Score: ${score} · R to restart`
+				: `Score: ${score} · Lives: ${lives}`,
+		);
+	}
+	ball.onSetup(serve);
+	ball.onUpdate(({ me }) => {
+		if (finished) {
+			me.resetVelocity();
+			return;
+		}
+		walls.update();
+		if ((me.getPosition()?.y ?? 0) < -10) {
+			lives--;
+			showScore();
+			if (!finished) serve();
 		}
 	});
-
-	game.onGlobalChange<number>('score', value => {
-		scoreText.updateText(`Score: ${value}`);
-	});
-
-	game.onGlobalChange<number>('lives', value => {
-		livesText.updateText(`Lives: ${value}`);
-	});
-
-	return game;
+	ball.onCollision(
+		({ entity, other }) => {
+			if (finished || removed.has(other.uuid)) return;
+			if (other.name !== 'brick' && other.name !== 'paddle') return;
+			bounce.applyRicochet({
+				entity: ricochetEntity(entity),
+				otherEntity: ricochetEntity(other),
+				contact: other.name === 'paddle' ? { normal: { x: 0, y: 1 } } : {},
+			});
+			ricochetSound(800, 0.04);
+			if (other.name === 'brick') {
+				removed.add(other.uuid);
+				destroy(other);
+				score += 100;
+				showScore();
+			}
+		},
+		{ phase: 'enter' },
+	);
+	return createGame(
+		{ id: 'breakout' },
+		createStage(
+			{ backgroundColor: '#101729' },
+			createCamera({ perspective: 'fixed-2d', zoom: 23 }),
+			paddle,
+			ball,
+			...bricks,
+			label,
+		).setInputConfiguration(movementControls),
+	);
 }

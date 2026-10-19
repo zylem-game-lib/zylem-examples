@@ -1,11 +1,21 @@
-import { Color, Vector2, Vector3 } from 'three';
-import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
-import { createSprite, createText, destroy, TEXT_TYPE } from '@zylem/game-lib/entity';
-import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
-import { ScreenWrapBehavior, Shooter2DBehavior, ThrusterBehavior, useBehavior } from '@zylem/game-lib/behavior';
-import { type Shooter2DSourceEntity } from '@zylem/game-lib/behavior';
+import { callFunc, delay, sequence } from '@zylem/game-lib/actions';
+import {
+  ScreenWrapBehavior,
+  Shooter2DBehavior,
+  ThrusterBehavior,
+} from '@zylem/game-lib/behavior';
+import {
+  createCamera,
+  createGame,
+  createStage,
+  Perspectives,
+} from '@zylem/game-lib/core';
+import { createSprite, createText, destroy } from '@zylem/game-lib/entity';
 import { setGlobal } from '@zylem/game-lib/globals';
+import { Color } from 'three';
 import { demoAsset } from '../../assets/manifest';
+import { withBehavior } from '../_shared/behavior';
+import { movementControls } from '../_shared/controls';
 
 const playerShipImg = demoAsset('general/space/player-ship.png');
 const playerLaserImg = demoAsset('general/space/player-laser.png');
@@ -18,8 +28,8 @@ export default function createDemo() {
   const PLAYFIELD_WIDTH = 30;
   const PLAYFIELD_HEIGHT = 20;
   const BULLET_SPEED = 18;
-  const BULLET_BOUNDS_X = PLAYFIELD_WIDTH * 0.5 + 3;
-  const BULLET_BOUNDS_Y = PLAYFIELD_HEIGHT * 0.5 + 3;
+  let finished = false;
+  const destroyedAsteroids = new Set<string>();
   const ASTEROID_SPEED = 1.1;
   const BRAKE_DECELERATION = 8;
 
@@ -56,27 +66,30 @@ export default function createDemo() {
       size: { x: 0.35, y: 0.75, z: 1 },
     });
 
-    bullet.onUpdate(({ me }) => {
-      const position = me.getPosition();
-      if (!position) return;
+    bullet.runAction(
+      sequence(
+        delay(1600),
+        callFunc(() => destroy(bullet)),
+      ),
+    );
 
-      if (
-        Math.abs(position.x) > BULLET_BOUNDS_X ||
-        Math.abs(position.y) > BULLET_BOUNDS_Y
-      ) {
-        destroy(me);
-      }
-    });
+    bullet.onCollision(
+      ({ entity, other, globals }) => {
+        if (
+          finished ||
+          other.name !== 'asteroid' ||
+          destroyedAsteroids.has(other.uuid)
+        ) {
+          return;
+        }
 
-    bullet.onCollision(({ entity, other, globals }) => {
-      if (other.name !== 'asteroid') {
-        return;
-      }
-
-      destroy(entity);
-      destroy(other);
-      setGlobal('score', (globals.score as number) + 10);
-    });
+        destroyedAsteroids.add(other.uuid);
+        destroy(entity);
+        destroy(other);
+        setGlobal('score', (globals.score as number) + 10);
+      },
+      { phase: 'enter' },
+    );
 
     return bullet;
   }
@@ -123,7 +136,7 @@ export default function createDemo() {
     position: { x: 0, y: 0, z: 0 },
   });
 
-  const playerShip = useBehavior(baseShip, ThrusterBehavior, {
+  const playerShip = withBehavior(baseShip, ThrusterBehavior, {
     linearThrust: 3.2,
     angularThrust: 3,
     linearDamping: 0.3,
@@ -157,6 +170,12 @@ export default function createDemo() {
   );
 
   playerShip.onUpdate(({ me, inputs, delta }) => {
+    if (finished) {
+      me.$thruster.thrust = 0;
+      me.$thruster.rotate = 0;
+      me.resetVelocity();
+      return;
+    }
     const { Horizontal, Vertical } = inputs.p1.axes;
     const { A } = inputs.p1.buttons;
 
@@ -168,28 +187,18 @@ export default function createDemo() {
     }
 
     const brakeInput = Math.max(0, Vertical.value);
-    if (brakeInput > 0 && me.body) {
-      const velocity = me.body.linvel();
-      const brakeScale = Math.max(
-        0,
-        1 - brakeInput * BRAKE_DECELERATION * delta,
-      );
-      me.body.setLinvel(
-        {
-          x: velocity.x * brakeScale,
-          y: velocity.y * brakeScale,
-          z: velocity.z,
-        },
-        true,
-      );
+    const velocity = me.getVelocity();
+    if (brakeInput > 0 && velocity) {
+      const scale = Math.max(0, 1 - brakeInput * BRAKE_DECELERATION * delta);
+      me.moveXY(velocity.x * scale, velocity.y * scale);
     }
 
     if (!A.pressed && A.held <= 0) {
       return;
     }
 
-    const sourcePosition = me.body?.translation();
-    const sourceRotation = me.body?.rotation();
+    const sourcePosition = me.getPosition();
+    const sourceRotation = me.getRotation();
     if (!sourcePosition || !sourceRotation) {
       return;
     }
@@ -197,7 +206,7 @@ export default function createDemo() {
     const facingAngle = getRotationAngle2D(sourceRotation);
     const forward = getForwardDirection(facingAngle);
     void playerShooter.fire({
-      source: me as Shooter2DSourceEntity,
+      source: me,
       stage,
       target: {
         x: sourcePosition.x + forward.x,
@@ -219,24 +228,33 @@ export default function createDemo() {
   );
 
   stage.add(playerShip, ...asteroids);
-  stage.setInputConfiguration(
-    mergeInputConfigs(useArrowsForAxes('p1'), useWASDForAxes('p1')),
-  );
+  stage.setInputConfiguration(movementControls);
 
   const game = createGame(
     {
-      id: 'new-asteroids',
+      id: 'asteroids',
       globals: {
         score: 0,
       },
     },
     stage,
     scoreText,
-  ).onGlobalChange<number>('score', (score, currentStage) => {
-    currentStage
-      ?.getEntityByName('scoreText', TEXT_TYPE)
-      ?.updateText(`Score: ${score}`);
+  ).onGlobalChange<number>('score', (score) => {
+    const cleared = destroyedAsteroids.size === asteroids.length;
+    finished ||= cleared;
+    if (finished && !cleared) return;
+    scoreText.updateText(
+      finished ? `You win! Score: ${score} — R to restart` : `Score: ${score}`,
+    );
   });
+  playerShip.onCollision(
+    ({ other }) => {
+      if (finished || other.name !== 'asteroid') return;
+      finished = true;
+      scoreText.updateText('Ship lost — R to restart');
+    },
+    { phase: 'enter' },
+  );
 
   return game;
 }

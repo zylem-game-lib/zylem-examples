@@ -9,8 +9,7 @@ import { Platformer3DBehavior, Platformer3DState } from '@zylem/game-lib/behavio
 import type { ErrorContext } from './spacetimedb-generated';
 import type { EntityTransform, Player } from './spacetimedb-generated/types';
 import { playgroundActor } from '../../utils';
-import { TransformableEntity } from '~/lib/actions/capabilities/apply-transform';
-import { GameEntity } from '~/lib/entities';
+import type { ZylemActor } from '@zylem/game-lib/entity';
 import { StageEntity } from '@zylem/game-lib/core';
 import {
 	multiplayerLobbyStore,
@@ -23,8 +22,7 @@ import {
 	preflightMultiplayerLobbySpacetimeUri,
 } from './multiplayer-lobby-stdb-client';
 
-type PlayerEntity = TransformableEntity &
-	GameEntity<any> &
+type PlayerEntity = ZylemActor &
 	StageEntity & {
 		/** Provided by ZylemActor (playgroundActor returns `any`, so declared here). */
 		playAnimation: (options: NetworkAnimationState) => void;

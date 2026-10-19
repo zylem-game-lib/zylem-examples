@@ -1,20 +1,14 @@
-import {
-	AmbientLight,
-	Color,
-	DirectionalLight,
-	HemisphereLight,
-	Vector3,
-} from 'three';
+import { callFunc, delay, sequence } from '@zylem/game-lib/actions';
+import { CooldownBehavior } from '@zylem/game-lib/behavior';
 import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
-import { createSphere, destroy } from '@zylem/game-lib/entity';
+import { createLight, createSphere, destroy } from '@zylem/game-lib/entity';
 import { setGlobal } from '@zylem/game-lib/globals';
 import { useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
-import {
-	createCougarShipRuntime,
-	updateCougarShip,
-} from './cougar-ship';
-import type { EnemyRuntime } from './enemy-common';
+import { Color, Vector3 } from 'three';
+import { starfieldTSL } from '../_shared/starfield.tsl';
+import { createCougarShipRuntime, updateCougarShip } from './cougar-ship';
 import { createSpaceInvadersEffects } from './effects';
+import type { EnemyRuntime } from './enemy-common';
 import {
 	createSpaceInvadersHud,
 	updateGameOverHud,
@@ -25,10 +19,6 @@ import {
 } from './hud';
 import { createPlayerShip } from './player-ship';
 import {
-	createSnakeShipRuntime,
-	updateSnakeShip,
-} from './snake-ship';
-import {
 	type EnemyKind,
 	ANNOUNCEMENT_DURATION_SECONDS,
 	BULLET_BOUNDS_X,
@@ -36,8 +26,8 @@ import {
 	BULLET_RADIUS,
 	ENEMY_BULLET_COLLISION_TYPE,
 	ENEMY_BULLET_SPEED,
-	ENEMY_COLORS,
 	ENEMY_COLLISION_TYPE,
+	ENEMY_COLORS,
 	ENEMY_SCORES,
 	PLAYER_BOUNDS_X,
 	PLAYER_BULLET_COLLISION_TYPE,
@@ -60,11 +50,8 @@ import {
 	setEntityVisibility,
 	setWorldPosition,
 } from './shared';
-import {
-	createVultureShipRuntime,
-	updateVultureShip,
-} from './vulture-ship';
-import { starfieldTSL } from '../_shared/starfield.tsl';
+import { createSnakeShipRuntime, updateSnakeShip } from './snake-ship';
+import { createVultureShipRuntime, updateVultureShip } from './vulture-ship';
 
 export default function createDemo() {
 	const camera = createCamera({
@@ -80,69 +67,45 @@ export default function createDemo() {
 		camera,
 	);
 
-	stage.setInputConfiguration(
-		useArrowsForAxes('p1'),
-		useWASDForAxes('p1'),
-		{
-			p1: {
-				key: {
-					' ': ['buttons.a'],
-				},
+	stage.setInputConfiguration(useArrowsForAxes('p1'), useWASDForAxes('p1'), {
+		p1: {
+			key: {
+				' ': ['buttons.a'],
 			},
 		},
-	);
-
-	stage.onSetup(({ stage: activeStage }: any) => {
-		const scene = (activeStage as any)?.wrappedStage?.scene?.scene;
-		if (!scene) {
-			return;
-		}
-
-		if (!scene.getObjectByName('space-invaders-fill-ambient')) {
-			const ambient = new AmbientLight('#dbeafe', 1.7);
-			ambient.name = 'space-invaders-fill-ambient';
-			scene.add(ambient);
-		}
-
-		if (!scene.getObjectByName('space-invaders-fill-hemi')) {
-			const hemi = new HemisphereLight('#dcfce7', '#090f1b', 1.55);
-			hemi.name = 'space-invaders-fill-hemi';
-			hemi.position.set(0, 0, 18);
-			scene.add(hemi);
-		}
-
-		if (!scene.getObjectByName('space-invaders-rim-light')) {
-			const rim = new DirectionalLight('#f9a8d4', 2.3);
-			rim.name = 'space-invaders-rim-light';
-			rim.position.set(-10, 8, 18);
-			scene.add(rim);
-		}
 	});
+
+	stage.add(
+		createLight({ type: 'ambient', color: '#dbeafe', intensity: 1.7 }),
+		createLight({
+			type: 'hemisphere',
+			color: '#dcfce7',
+			groundColor: '#090f1b',
+			intensity: 1.55,
+		}),
+		createLight({
+			type: 'directional',
+			color: '#f9a8d4',
+			intensity: 2.3,
+			position: { x: -10, y: 8, z: 18 },
+		}),
+	);
 
 	const hud = createSpaceInvadersHud();
 	const player = createPlayerShip();
+	const weapon = player.entity.use(CooldownBehavior, {
+		cooldowns: { fire: { duration: PLAYER_SHOOT_COOLDOWN_SECONDS } },
+	});
 	const effects = createSpaceInvadersEffects();
 
 	const projectiles = new Set<ReturnType<typeof createSphere>>();
 	const enemyRuntimeByUuid = new Map<string, EnemyRuntime>();
-	const pendingEntityCleanup = new Map<
-		string,
-		{ entity: { uuid: string }; ttl: number }
-	>();
 	let enemyRuntimes: EnemyRuntime[] = [];
-	let shootCooldown = 0;
 	let playerDamageCooldown = 0;
 	let announcementTimer = 0;
 	let nextWaveTimer = 0;
 
-	stage.add(
-		player.entity,
-		player.shield,
-		...effects.entities,
-	);
-	player.entity.onDestroy(() => {
-		pendingEntityCleanup.delete(player.entity.uuid);
-	});
+	stage.add(player.entity, player.shield, ...effects.entities);
 
 	function getPlayerPosition() {
 		return getEntityPosition(player.entity);
@@ -163,22 +126,15 @@ export default function createDemo() {
 	}
 
 	function scheduleEntityCleanup(
-		entity: { uuid: string },
+		entity: ReturnType<typeof createPlayerShip>['entity'],
 		ttl = SHIP_FRAGMENT_TTL_SECONDS,
 	) {
-		pendingEntityCleanup.set(entity.uuid, { entity, ttl });
-	}
-
-	function tickEntityCleanup(delta: number, globals: Record<string, unknown>) {
-		for (const [uuid, pending] of [...pendingEntityCleanup.entries()]) {
-			pending.ttl -= delta;
-			if (pending.ttl > 0) {
-				continue;
-			}
-
-			destroy(pending.entity as any, globals);
-			pendingEntityCleanup.delete(uuid);
-		}
+		entity.runAction(
+			sequence(
+				delay(ttl * 1000),
+				callFunc(() => destroy(entity)),
+			),
+		);
 	}
 
 	function syncPlayerShield(gameOver: boolean) {
@@ -187,12 +143,19 @@ export default function createDemo() {
 			return;
 		}
 
-		player.shield.setPosition(playerPosition.x, playerPosition.y, playerPosition.z);
+		player.shield.setPosition(
+			playerPosition.x,
+			playerPosition.y,
+			playerPosition.z,
+		);
 		player.shield.setPositionZ(playerPosition.z);
 		setEntityVisibility(player.shield, playerDamageCooldown > 0 && !gameOver);
 	}
 
-	function showAnnouncement(text: string, duration = ANNOUNCEMENT_DURATION_SECONDS) {
+	function showAnnouncement(
+		text: string,
+		duration = ANNOUNCEMENT_DURATION_SECONDS,
+	) {
 		announcementTimer = duration;
 		updateStatusHud(text, stage as any);
 	}
@@ -257,9 +220,13 @@ export default function createDemo() {
 
 		runtime.alive = false;
 		if (awardScore) {
-			setGlobal('score', Number(globals.score ?? 0) + ENEMY_SCORES[runtime.kind]);
+			setGlobal(
+				'score',
+				Number(globals.score ?? 0) + ENEMY_SCORES[runtime.kind],
+			);
 		}
-		const enemyPosition = getEntityPosition(runtime.entity) ?? runtime.anchor.clone();
+		const enemyPosition =
+			getEntityPosition(runtime.entity) ?? runtime.anchor.clone();
 		effects.playEnemyDeath(runtime.kind, enemyPosition);
 		if (runtime.explode(impactWorld ?? enemyPosition)) {
 			scheduleEntityCleanup(runtime.entity);
@@ -268,10 +235,10 @@ export default function createDemo() {
 		}
 
 		if (
-			allowWaveClear
-			&& !Boolean(globals.gameOver)
-			&& nextWaveTimer <= 0
-			&& !enemyRuntimes.some((enemy) => enemy.alive)
+			allowWaveClear &&
+			!Boolean(globals.gameOver) &&
+			nextWaveTimer <= 0 &&
+			!enemyRuntimes.some((enemy) => enemy.alive)
 		) {
 			nextWaveTimer = WAVE_RESPAWN_DELAY_SECONDS;
 			showAnnouncement('Wave Cleared', WAVE_RESPAWN_DELAY_SECONDS);
@@ -310,31 +277,40 @@ export default function createDemo() {
 			setWorldPosition(me, nextPosition);
 
 			if (
-				Math.abs(nextPosition.x) > BULLET_BOUNDS_X
-				|| Math.abs(nextPosition.y) > BULLET_BOUNDS_Y
+				Math.abs(nextPosition.x) > BULLET_BOUNDS_X ||
+				Math.abs(nextPosition.y) > BULLET_BOUNDS_Y
 			) {
 				destroy(me);
 			}
 		});
 
-		bullet.onCollision(({ entity, other, globals }: any) => {
-			const runtime = enemyRuntimeByUuid.get(other.uuid);
-			if (!runtime || !runtime.alive) {
-				return;
-			}
+		bullet.onCollision(
+			({ entity, other, globals }: any) => {
+				const runtime = enemyRuntimeByUuid.get(other.uuid);
+				if (!runtime || !runtime.alive) {
+					return;
+				}
 
-			const hitPosition = getEntityPosition(entity);
-			if (hitPosition) {
-				effects.playImpact(hitPosition);
-			}
+				const hitPosition = getEntityPosition(entity);
+				if (hitPosition) {
+					effects.playImpact(hitPosition);
+				}
 
-			const destroyed = destroyEnemy(runtime, globals, true, true, hitPosition ?? undefined);
-			if (destroyed) {
-				destroy(entity, globals);
-			}
-		}, {
-			phase: 'enter',
-		});
+				const destroyed = destroyEnemy(
+					runtime,
+					globals,
+					true,
+					true,
+					hitPosition ?? undefined,
+				);
+				if (destroyed) {
+					destroy(entity, globals);
+				}
+			},
+			{
+				phase: 'enter',
+			},
+		);
 
 		return bullet;
 	}
@@ -369,28 +345,31 @@ export default function createDemo() {
 			setWorldPosition(me, nextPosition);
 
 			if (
-				Math.abs(nextPosition.x) > BULLET_BOUNDS_X
-				|| Math.abs(nextPosition.y) > BULLET_BOUNDS_Y
+				Math.abs(nextPosition.x) > BULLET_BOUNDS_X ||
+				Math.abs(nextPosition.y) > BULLET_BOUNDS_Y
 			) {
 				destroy(me);
 			}
 		});
 
-		bullet.onCollision(({ entity, other, globals }: any) => {
-			if (other.uuid !== player.entity.uuid) {
-				return;
-			}
+		bullet.onCollision(
+			({ entity, other, globals }: any) => {
+				if (other.uuid !== player.entity.uuid) {
+					return;
+				}
 
-			const hitPosition = getEntityPosition(entity);
-			if (hitPosition) {
-				effects.playImpact(hitPosition, Math.PI);
-			}
+				const hitPosition = getEntityPosition(entity);
+				if (hitPosition) {
+					effects.playImpact(hitPosition, Math.PI);
+				}
 
-			damagePlayer(1, globals, hitPosition ?? undefined);
-			destroy(entity, globals);
-		}, {
-			phase: 'enter',
-		});
+				damagePlayer(1, globals, hitPosition ?? undefined);
+				destroy(entity, globals);
+			},
+			{
+				phase: 'enter',
+			},
+		);
 
 		return bullet;
 	}
@@ -420,62 +399,69 @@ export default function createDemo() {
 		bullet.onUpdate(({ me, delta }: any) => {
 			elapsed += delta;
 			const nextPosition = new Vector3(
-				origin.x
-					+ Math.sin(elapsed * SINE_BULLET_FREQUENCY + phase)
-						* SINE_BULLET_AMPLITUDE,
+				origin.x +
+					Math.sin(elapsed * SINE_BULLET_FREQUENCY + phase) *
+						SINE_BULLET_AMPLITUDE,
 				origin.y - ENEMY_BULLET_SPEED * elapsed,
 				0,
 			);
 			setWorldPosition(me, nextPosition);
 
 			if (
-				Math.abs(nextPosition.x) > BULLET_BOUNDS_X
-				|| Math.abs(nextPosition.y) > BULLET_BOUNDS_Y
+				Math.abs(nextPosition.x) > BULLET_BOUNDS_X ||
+				Math.abs(nextPosition.y) > BULLET_BOUNDS_Y
 			) {
 				destroy(me);
 			}
 		});
 
-		bullet.onCollision(({ entity, other, globals }: any) => {
-			if (other.uuid !== player.entity.uuid) {
-				return;
-			}
+		bullet.onCollision(
+			({ entity, other, globals }: any) => {
+				if (other.uuid !== player.entity.uuid) {
+					return;
+				}
 
-			const hitPosition = getEntityPosition(entity);
-			if (hitPosition) {
-				effects.playImpact(hitPosition, Math.PI);
-			}
+				const hitPosition = getEntityPosition(entity);
+				if (hitPosition) {
+					effects.playImpact(hitPosition, Math.PI);
+				}
 
-			damagePlayer(1, globals, hitPosition ?? undefined);
-			destroy(entity, globals);
-		}, {
-			phase: 'enter',
-		});
+				damagePlayer(1, globals, hitPosition ?? undefined);
+				destroy(entity, globals);
+			},
+			{
+				phase: 'enter',
+			},
+		);
 
 		return bullet;
 	}
 
 	function registerEnemyRuntime(runtime: EnemyRuntime) {
-		runtime.entity.onCollision(({ other, globals }: any) => {
-			if (!runtime.alive || other.uuid !== player.entity.uuid) {
-				return;
-			}
+		runtime.entity.onCollision(
+			({ other, globals }: any) => {
+				if (!runtime.alive || other.uuid !== player.entity.uuid) {
+					return;
+				}
 
-			const impactWorld =
-				getEntityPosition(runtime.entity)
-				?? getPlayerPosition()
-				?? runtime.anchor.clone();
-			effects.playImpact(impactWorld);
-			const didGameOver = damagePlayer(1, globals, impactWorld);
-			destroyEnemy(runtime, globals, false, !didGameOver, impactWorld);
-		}, {
-			phase: 'enter',
-		});
+				const impactWorld =
+					getEntityPosition(runtime.entity) ??
+					getPlayerPosition() ??
+					runtime.anchor.clone();
+				effects.playImpact(impactWorld);
+				const didGameOver = damagePlayer(1, globals, impactWorld);
+				destroyEnemy(runtime, globals, false, !didGameOver, impactWorld);
+			},
+			{
+				phase: 'enter',
+			},
+		);
 
 		runtime.entity.onDestroy(() => {
 			enemyRuntimeByUuid.delete(runtime.entity.uuid);
-			pendingEntityCleanup.delete(runtime.entity.uuid);
-			enemyRuntimes = enemyRuntimes.filter((candidate) => candidate !== runtime);
+			enemyRuntimes = enemyRuntimes.filter(
+				(candidate) => candidate !== runtime,
+			);
 		});
 
 		enemyRuntimeByUuid.set(runtime.entity.uuid, runtime);
@@ -558,7 +544,6 @@ export default function createDemo() {
 
 	function stopGameplay(globals: Record<string, unknown>) {
 		nextWaveTimer = 0;
-		shootCooldown = Number.POSITIVE_INFINITY;
 		playerDamageCooldown = 0;
 		clearProjectiles(globals);
 		setEntityVisibility(player.shield, false);
@@ -566,7 +551,7 @@ export default function createDemo() {
 
 	const game = createGame(
 		{
-			id: '3d-space-invaders',
+			id: 'zylem-invaders',
 			debug: true,
 			globals: {
 				gameOver: false,
@@ -581,63 +566,61 @@ export default function createDemo() {
 		hud.scoreText,
 		hud.statusText,
 		hud.gameOverText,
-	).onUpdate(({ inputs, delta, globals }: any) => {
-		tickEntityCleanup(delta, globals);
-
-		if (Boolean(globals.gameOver)) {
-			syncPlayerShield(true);
-			return;
-		}
-
-		playerDamageCooldown = Math.max(0, playerDamageCooldown - delta);
-		tickAnnouncement(delta);
-		syncPlayerShield(false);
-
-		if (nextWaveTimer > 0 && !enemyRuntimes.some((enemy) => enemy.alive)) {
-			nextWaveTimer = Math.max(0, nextWaveTimer - delta);
-			if (nextWaveTimer <= 0) {
-				const nextWave = Number(globals.wave ?? 1) + 1;
-				spawnWave(nextWave);
-				setGlobal('wave', nextWave);
-				showAnnouncement(`Wave ${nextWave}`);
+	)
+		.onUpdate(({ inputs, delta, globals }: any) => {
+			if (Boolean(globals.gameOver)) {
+				syncPlayerShield(true);
+				return;
 			}
-		}
 
-		const horizontalInput = clamp(inputs.p1.axes.Horizontal.value, -1, 1);
-		const playerPosition = getPlayerPosition();
-		if (playerPosition) {
-			const nextX = clamp(
-				playerPosition.x + horizontalInput * PLAYER_SPEED * delta,
-				-PLAYER_BOUNDS_X,
-				PLAYER_BOUNDS_X,
-			);
-			setWorldPosition(player.entity, new Vector3(nextX, PLAYER_START_Y, 0));
-		}
+			playerDamageCooldown = Math.max(0, playerDamageCooldown - delta);
+			tickAnnouncement(delta);
+			syncPlayerShield(false);
 
-		shootCooldown = Math.max(0, shootCooldown - delta);
-		if (
-			(inputs.p1.buttons.A.pressed || inputs.p1.buttons.A.held > 0)
-			&& shootCooldown <= 0
-		) {
-			const latestPlayerPosition = getPlayerPosition();
-			if (latestPlayerPosition) {
-				addProjectile(
-					createPlayerBullet(
-						latestPlayerPosition.clone().add(new Vector3(0, 1.15, 0)),
-					),
+			if (nextWaveTimer > 0 && !enemyRuntimes.some((enemy) => enemy.alive)) {
+				nextWaveTimer = Math.max(0, nextWaveTimer - delta);
+				if (nextWaveTimer <= 0) {
+					const nextWave = Number(globals.wave ?? 1) + 1;
+					spawnWave(nextWave);
+					setGlobal('wave', nextWave);
+					showAnnouncement(`Wave ${nextWave}`);
+				}
+			}
+
+			const horizontalInput = clamp(inputs.p1.axes.Horizontal.value, -1, 1);
+			const playerPosition = getPlayerPosition();
+			if (playerPosition) {
+				const nextX = clamp(
+					playerPosition.x + horizontalInput * PLAYER_SPEED * delta,
+					-PLAYER_BOUNDS_X,
+					PLAYER_BOUNDS_X,
 				);
-				shootCooldown = PLAYER_SHOOT_COOLDOWN_SECONDS;
-			}
-		}
-
-		for (const runtime of [...enemyRuntimes]) {
-			if (!runtime.alive) {
-				continue;
+				setWorldPosition(player.entity, new Vector3(nextX, PLAYER_START_Y, 0));
 			}
 
-			updateEnemy(runtime, delta);
-		}
-	})
+			if (
+				(inputs.p1.buttons.A.pressed || inputs.p1.buttons.A.held > 0) &&
+				weapon.isReady('fire')
+			) {
+				const latestPlayerPosition = getPlayerPosition();
+				if (latestPlayerPosition) {
+					addProjectile(
+						createPlayerBullet(
+							latestPlayerPosition.clone().add(new Vector3(0, 1.15, 0)),
+						),
+					);
+					weapon.fire('fire');
+				}
+			}
+
+			for (const runtime of [...enemyRuntimes]) {
+				if (!runtime.alive) {
+					continue;
+				}
+
+				updateEnemy(runtime, delta);
+			}
+		})
 		.onGlobalChange<number>('score', (score: number, currentStage: any) => {
 			updateScoreHud(score, currentStage as any);
 		})
@@ -650,13 +633,16 @@ export default function createDemo() {
 		.onGlobalChange<number>('wave', (wave: number, currentStage: any) => {
 			updateWaveHud(wave, currentStage as any);
 		})
-		.onGlobalChange<boolean>('gameOver', (gameOver: boolean, currentStage: any) => {
-			updateGameOverHud(gameOver, currentStage as any);
-			if (gameOver) {
-				updateStatusHud('', currentStage as any);
-				stopGameplay({ gameOver: true });
-			}
-		});
+		.onGlobalChange<boolean>(
+			'gameOver',
+			(gameOver: boolean, currentStage: any) => {
+				updateGameOverHud(gameOver, currentStage as any);
+				if (gameOver) {
+					updateStatusHud('', currentStage as any);
+					stopGameplay({ gameOver: true });
+				}
+			},
+		);
 
 	spawnWave(1);
 	showAnnouncement('Wave 1');

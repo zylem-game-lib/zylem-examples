@@ -22,6 +22,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Catalog contract
+        run: pnpm test:catalog
+
       - name: Build
         run: pnpm build
         env:

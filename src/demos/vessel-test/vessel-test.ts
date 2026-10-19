@@ -1,57 +1,29 @@
-import { createGame, vessel, createStage } from '@zylem/game-lib/core';
-import { createText } from '@zylem/game-lib/entity';
-import { createGlobal, getGlobal, setGlobal } from '@zylem/game-lib/globals';
-import { demoAsset } from '../../assets/manifest';
-import { Vector2 } from 'three';
-
-const marsSurfacePath = demoAsset('general/texture-mars-surface.jpg');
+import { createGame, createStage, vessel } from '@zylem/game-lib/core';
+import { createSphere, createText, destroy } from '@zylem/game-lib/entity';
+import { movementControls } from '../_shared/controls';
 
 export default function createDemo() {
-  createGlobal('vesselCounter', 0);
-
-  const testVessel = vessel()
-    .onSetup((params: any) => {
-      const vesselCounter = getGlobal('vesselCounter') as number;
-      vesselTextSetup.updateText(
-        `Vessel was setup ${Math.ceil(vesselCounter)}`,
-      );
-    })
-    .onUpdate((params: any) => {
-      let vesselCounter = getGlobal('vesselCounter') as number;
-      vesselCounter += params.delta;
-      setGlobal('vesselCounter', vesselCounter);
-      vesselTextUpdate.updateText(
-        `Vessel was updated ${Math.ceil(vesselCounter)}`,
-      );
-    });
-
-  const vesselTextSetup = createText({
-    text: '',
-    stickToViewport: true,
-    screenPosition: { x: 0.5, y: 0.25 },
+  const status = createText({
+    text: 'Waiting for setup',
+    screenPosition: { x: 0.5, y: 0.15 },
   });
-
-  const vesselText = createText({
-    text: 'Hello World',
-    stickToViewport: true,
-    screenPosition: { x: 0.5, y: 0.5 },
+  const group = vessel().add(createSphere());
+  let elapsed = 0;
+  let removed = false;
+  group.onSetup(() => status.updateText('Vessel ready'));
+  group.onUpdate(({ delta }) => {
+    elapsed += delta;
+    status.updateText(`Vessel updating: ${elapsed.toFixed(1)} s`);
   });
-
-  const vesselTextUpdate = createText({
-    text: '',
-    stickToViewport: true,
-    screenPosition: { x: 0.5, y: 0.75 },
-  });
-
-  const stage1 = createStage({ backgroundImage: marsSurfacePath });
-  const testGame = createGame(
-    { id: 'zylem', debug: true, globals: { vesselCounter: 0 } },
-    stage1,
-    testVessel,
-    vesselText,
-    vesselTextSetup,
-    vesselTextUpdate,
+  group.onDestroy(() => status.updateText('Vessel destroyed — R to restart'));
+  const stage = createStage({}, group, status).setInputConfiguration(
+    movementControls,
   );
-
-  return testGame;
+  stage.onUpdate(({ inputs }) => {
+    if (!removed && inputs.p1.buttons.A.pressed) {
+      removed = true;
+      destroy(group);
+    }
+  });
+  return createGame(stage);
 }

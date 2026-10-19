@@ -14,29 +14,38 @@ test.describe('desktop side panel', () => {
 		const sidePanel = page.locator('[data-side-panel]');
 		await expect(sidePanel).toBeVisible();
 
-		const sidePanelHasHorizontalOverflow = await sidePanel.evaluate((element) => {
-			const contentElements = Array.from(element.children).filter(
-				(child) => child.tagName !== 'BUTTON',
-			);
+		const sidePanelHasHorizontalOverflow = await sidePanel.evaluate(
+			(element) => {
+				const contentElements = Array.from(element.children).filter(
+					(child) => child.tagName !== 'BUTTON',
+				);
 
-			return contentElements.some(
-				(contentElement) => contentElement.scrollWidth > contentElement.clientWidth,
-			);
-		});
+				return contentElements.some(
+					(contentElement) =>
+						contentElement.scrollWidth > contentElement.clientWidth,
+				);
+			},
+		);
 
 		expect(sidePanelHasHorizontalOverflow).toBeFalsy();
 	});
 
 	test('closes side panel after selecting a demo', async ({ page }) => {
-		const searchInput = page.locator('[data-side-panel] input[placeholder="Search..."]');
-		const sidePanelToggle = page.locator('[data-side-panel] button[aria-controls="examples-list-panel"]');
-		const demoButton = page.locator('[data-side-panel] button[aria-label="Empty Game"]');
+		const searchInput = page.locator(
+			'[data-side-panel] input[placeholder="Search..."]',
+		);
+		const sidePanelToggle = page.locator(
+			'[data-side-panel] button[aria-controls="examples-list-panel"]',
+		);
+		const demoButton = page.locator(
+			'[data-side-panel] button[aria-label="Basic"]',
+		);
 
-		await searchInput.fill('empty game');
+		await searchInput.fill('basic');
 		await expect(demoButton).toBeVisible();
 		await demoButton.click();
 
-		await expect(page).toHaveURL(/\/demos\/empty-game$/);
+		await expect(page).toHaveURL(/\/demos\/basic$/);
 		await expect(sidePanelToggle).toHaveAttribute('aria-expanded', 'false');
 	});
 });

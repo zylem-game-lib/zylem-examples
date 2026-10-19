@@ -1,21 +1,22 @@
-import { Color, Vector3 } from 'three';
-import { createActor, createSphere, destroy } from '@zylem/game-lib/entity';
-import { Destructible3DBehavior, FractureOptions, ScreenWrapBehavior, type Destructible3DHandle } from '@zylem/game-lib/behavior';
-import { demoAsset } from '../../assets/manifest';
-
-const fisherShipGlb = demoAsset('general/player-ship.glb');
-import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
-import { createEnergyShield } from '@zylem/shaders';
+import { callFunc, delay, sequence } from '@zylem/game-lib/actions';
 import {
-	BULLET_BOUNDS_X,
-	BULLET_BOUNDS_Y,
+	Destructible3DBehavior,
+	FractureOptions,
+	type Destructible3DHandle,
+} from '@zylem/game-lib/behavior';
+import { createActor, createSphere, destroy } from '@zylem/game-lib/entity';
+import { createEnergyShield } from '@zylem/shaders';
+import { Color, Vector3 } from 'three';
+import { demoAsset } from '../../assets/manifest';
+import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
+import {
 	SHIP_MODEL_TILT_X,
 	SHIP_MODEL_YAW_OFFSET,
-	WRAP_HEIGHT,
-	WRAP_WIDTH,
 	getFirstMesh,
 	getModelRoot,
 } from './shared';
+
+const fisherShipGlb = demoAsset('general/player-ship.glb');
 
 export type ShipRuntime = {
 	entity: ReturnType<typeof createActor>;
@@ -25,7 +26,10 @@ export type ShipRuntime = {
 };
 
 export function setEntityVisibility(
-	entity: { group?: { visible: boolean } | null; mesh?: { visible: boolean } | null },
+	entity: {
+		group?: { visible: boolean } | null;
+		mesh?: { visible: boolean } | null;
+	},
 	visible: boolean,
 ) {
 	if (entity.group) {
@@ -85,11 +89,6 @@ export function createShip(): ShipRuntime {
 	});
 	let warmedUp = false;
 	let exploded = false;
-
-	ship.use(ScreenWrapBehavior, {
-		width: WRAP_WIDTH,
-		height: WRAP_HEIGHT,
-	});
 
 	ship.onSetup(({ me }) => {
 		me.body?.setGravityScale(0, true);
@@ -177,50 +176,38 @@ export function createProjectile(
 		},
 	});
 
-	let lifetime = 1.15;
+	bullet.onSetup(({ me }) => me.moveXY(velocity.x, velocity.y));
+	bullet.runAction(
+		sequence(
+			delay(1150),
+			callFunc(() => destroy(bullet)),
+		),
+	);
 
-	bullet.onSetup(({ me }) => {
-		me.body?.setGravityScale(0, true);
-		me.body?.setLinearDamping(0);
-	});
+	bullet.onCollision(
+		({ entity, other, globals }) => {
+			if (other.uuid === sourceUuid) {
+				return;
+			}
 
-	bullet.onUpdate(({ me, delta }) => {
-		lifetime -= delta;
-		me.moveXY(velocity.x, velocity.y);
-		me.setPositionZ(0);
+			const hitPosition = entity.getPosition();
+			if (!hitPosition) {
+				return;
+			}
 
-		const current = me.getPosition();
-		if (
-			lifetime <= 0
-			|| !current
-			|| Math.abs(current.x) > BULLET_BOUNDS_X
-			|| Math.abs(current.y) > BULLET_BOUNDS_Y
-		) {
-			destroy(me);
-		}
-	});
-
-	bullet.onCollision(({ entity, other, globals }) => {
-		if (other.uuid === sourceUuid) {
-			return;
-		}
-
-		const hitPosition = entity.getPosition();
-		if (!hitPosition) {
-			return;
-		}
-
-		const didHitAsteroid = onAsteroidHit(
-			other.uuid,
-			new Vector3(hitPosition.x, hitPosition.y, hitPosition.z ?? 0),
-			globals,
-		);
-		if (didHitAsteroid) {
-			destroy(entity, globals);
-		}
-	}, {
-		phase: 'enter',
-	});
+			const didHitAsteroid = onAsteroidHit(
+				other.uuid,
+				new Vector3(hitPosition.x, hitPosition.y, hitPosition.z ?? 0),
+				globals,
+			);
+			if (didHitAsteroid) {
+				destroy(entity, globals);
+			}
+		},
+		{
+			phase: 'enter',
+		},
+	);
 
 	return bullet;
 }

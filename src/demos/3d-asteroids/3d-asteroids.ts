@@ -1,12 +1,16 @@
+import { CooldownBehavior } from '@zylem/game-lib/behavior';
 import {
-	AmbientLight,
-	DirectionalLight,
-	HemisphereLight,
-	Vector3,
-} from 'three';
-import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+	createCamera,
+	createFollowTarget,
+	createGame,
+	createStage,
+} from '@zylem/game-lib/core';
+import { createLight } from '@zylem/game-lib/entity';
 import { setGlobal } from '@zylem/game-lib/globals';
 import { useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
+import { Vector3 } from 'three';
+import { trackEntity } from '../_shared/camera';
+import { starfieldTSL } from '../_shared/starfield.tsl';
 import { createAsteroidField } from './asteroid';
 import {
 	createAsteroidHud,
@@ -14,16 +18,7 @@ import {
 	updateHealthHud,
 	updateScoreHud,
 } from './hud';
-import {
-	alignParticleSystem,
-	createAsteroidParticles,
-} from './particles';
-import {
-	createProjectile,
-	createShip,
-	orientShipModel,
-	setEntityVisibility,
-} from './ship';
+import { alignParticleSystem, createAsteroidParticles } from './particles';
 import {
 	BULLET_SPEED,
 	PLAYER_COLLISION_DAMAGE,
@@ -39,7 +34,12 @@ import {
 	getForwardDirection,
 	getRightDirection,
 } from './shared';
-import { starfieldTSL } from '../_shared/starfield.tsl';
+import {
+	createProjectile,
+	createShip,
+	orientShipModel,
+	setEntityVisibility,
+} from './ship';
 
 const GAME_OVER_HUD_DELAY_SECONDS = 0.45;
 
@@ -47,6 +47,9 @@ export default function createDemo() {
 	const camera = createCamera({
 		position: { x: 0, y: 0, z: 13.5 },
 		target: { x: 0, y: 0, z: 0 },
+		behaviors: {
+			follow: createFollowTarget({ offset: [0, 0, 20], lerpFactor: 0.15 }),
+		},
 	});
 
 	const stage = createStage(
@@ -57,53 +60,38 @@ export default function createDemo() {
 		camera,
 	);
 
-	stage.setInputConfiguration(
-		useArrowsForAxes('p1'),
-		useWASDForAxes('p1'),
-		{
-			p1: {
-				key: {
-					' ': ['buttons.a'],
-				},
+	stage.setInputConfiguration(useArrowsForAxes('p1'), useWASDForAxes('p1'), {
+		p1: {
+			key: {
+				' ': ['buttons.a'],
 			},
 		},
-	);
-
-	stage.onSetup(({ stage: activeStage }) => {
-		const scene = (activeStage as any)?.wrappedStage?.scene?.scene;
-		if (!scene) {
-			return;
-		}
-
-		if (!scene.getObjectByName('asteroids-fill-ambient')) {
-			const ambient = new AmbientLight('#dbeafe', 1.8);
-			ambient.name = 'asteroids-fill-ambient';
-			scene.add(ambient);
-		}
-
-		if (!scene.getObjectByName('asteroids-fill-hemi')) {
-			const hemi = new HemisphereLight('#e0f2fe', '#0f172a', 1.5);
-			hemi.name = 'asteroids-fill-hemi';
-			hemi.position.set(0, 0, 18);
-			scene.add(hemi);
-		}
-
-		if (!scene.getObjectByName('asteroids-rim-light')) {
-			const rim = new DirectionalLight('#93c5fd', 2.6);
-			rim.name = 'asteroids-rim-light';
-			rim.position.set(-12, 6, 18);
-			scene.add(rim);
-		}
 	});
+
+	stage.add(
+		createLight({ type: 'ambient', color: '#dbeafe', intensity: 1.8 }),
+		createLight({
+			type: 'hemisphere',
+			color: '#e0f2fe',
+			groundColor: '#0f172a',
+			intensity: 1.5,
+		}),
+		createLight({
+			type: 'directional',
+			color: '#93c5fd',
+			intensity: 2.6,
+			position: { x: -12, y: 6, z: 18 },
+		}),
+	);
 
 	const hud = createAsteroidHud();
 	const ship = createShip();
-	const {
-		thrusterParticles,
-		muzzleFlash,
-		impactBurst,
-		shipDeathBurst,
-	} = createAsteroidParticles();
+	ship.entity.onSetup(() => trackEntity(camera, ship.entity));
+	const weapon = ship.entity.use(CooldownBehavior, {
+		cooldowns: { fire: { duration: SHOOT_COOLDOWN_SECONDS } },
+	});
+	const { thrusterParticles, muzzleFlash, impactBurst, shipDeathBurst } =
+		createAsteroidParticles();
 	const asteroidField = createAsteroidField({
 		getPlayerPosition: () => {
 			const position = ship.entity.getPosition();
@@ -120,14 +108,12 @@ export default function createDemo() {
 	let elapsedSeconds = 0;
 	let shipAngle = 0;
 	const shipVelocity = new Vector3();
-	let shootCooldown = 0;
 	let playerDamageCooldown = 0;
 	let gameOverHudDelay = 0;
 	let gameOverHudShown = false;
 
 	function stopGameplay() {
 		shipVelocity.set(0, 0, 0);
-		shootCooldown = Number.POSITIVE_INFINITY;
 		playerDamageCooldown = Number.POSITIVE_INFINITY;
 		thrusterParticles.stop();
 		muzzleFlash.stop();
@@ -152,34 +138,37 @@ export default function createDemo() {
 		muzzleFlash.restart();
 	}
 
-	ship.entity.onCollision(({ other, globals }) => {
-		if (Boolean(globals.gameOver) || playerDamageCooldown > 0) {
-			return;
-		}
+	ship.entity.onCollision(
+		({ other, globals }) => {
+			if (Boolean(globals.gameOver) || playerDamageCooldown > 0) {
+				return;
+			}
 
-		const shipPosition = ship.entity.getPosition();
-		if (!shipPosition) {
-			return;
-		}
+			const shipPosition = ship.entity.getPosition();
+			if (!shipPosition) {
+				return;
+			}
 
-		const didHitAsteroid = asteroidField.handleHitByUuid(
-			other.uuid,
-			new Vector3(shipPosition.x, shipPosition.y, shipPosition.z ?? 0),
-			globals,
-		);
-		if (!didHitAsteroid) {
-			return;
-		}
+			const didHitAsteroid = asteroidField.handleHitByUuid(
+				other.uuid,
+				new Vector3(shipPosition.x, shipPosition.y, shipPosition.z ?? 0),
+				globals,
+			);
+			if (!didHitAsteroid) {
+				return;
+			}
 
-		const nextHealth = Math.max(
-			0,
-			Number(globals.health ?? PLAYER_MAX_HEALTH) - PLAYER_COLLISION_DAMAGE,
-		);
-		setGlobal('health', nextHealth);
-		playerDamageCooldown = PLAYER_DAMAGE_COOLDOWN_SECONDS;
-	}, {
-		phase: 'enter',
-	});
+			const nextHealth = Math.max(
+				0,
+				Number(globals.health ?? PLAYER_MAX_HEALTH) - PLAYER_COLLISION_DAMAGE,
+			);
+			setGlobal('health', nextHealth);
+			playerDamageCooldown = PLAYER_DAMAGE_COOLDOWN_SECONDS;
+		},
+		{
+			phase: 'enter',
+		},
+	);
 
 	stage.add(
 		ship.entity,
@@ -196,7 +185,7 @@ export default function createDemo() {
 
 	const game = createGame(
 		{
-			id: '3d-asteroids',
+			id: 'escape-zylocity',
 			debug: true,
 			globals: {
 				gameOver: false,
@@ -207,92 +196,114 @@ export default function createDemo() {
 		stage,
 		hud.gameOverText,
 		hud.scoreText,
-	).onUpdate(({ inputs, delta, globals }) => {
-		orientShipModel(ship.entity);
-		if (Boolean(globals.gameOver)) {
-			if (!gameOverHudShown) {
-				gameOverHudDelay = Math.max(0, gameOverHudDelay - delta);
-				if (gameOverHudDelay <= 0) {
-					updateGameOverHud(true, stage as any);
-					gameOverHudShown = true;
+	)
+		.onUpdate(({ inputs, delta, globals }) => {
+			orientShipModel(ship.entity);
+			if (Boolean(globals.gameOver)) {
+				if (!gameOverHudShown) {
+					gameOverHudDelay = Math.max(0, gameOverHudDelay - delta);
+					if (gameOverHudDelay <= 0) {
+						updateGameOverHud(true, stage as any);
+						gameOverHudShown = true;
+					}
 				}
+				return;
 			}
-			return;
-		}
 
-		playerDamageCooldown = Math.max(0, playerDamageCooldown - delta);
-		elapsedSeconds += delta;
-		asteroidField.tick(delta, elapsedSeconds);
+			playerDamageCooldown = Math.max(0, playerDamageCooldown - delta);
+			elapsedSeconds += delta;
+			asteroidField.tick(delta, elapsedSeconds);
 
-		const { p1 } = inputs;
-		const turnInput = -p1.axes.Horizontal.value;
-		const thrustInput = Math.max(0, -p1.axes.Vertical.value);
-		const brakeInput = Math.max(0, p1.axes.Vertical.value);
+			const { p1 } = inputs;
+			const turnInput = -p1.axes.Horizontal.value;
+			const thrustInput = Math.max(0, -p1.axes.Vertical.value);
+			const brakeInput = Math.max(0, p1.axes.Vertical.value);
 
-		shipAngle += turnInput * SHIP_TURN_SPEED * delta;
+			shipAngle += turnInput * SHIP_TURN_SPEED * delta;
 
-		if (thrustInput > 0) {
-			const forward = getForwardDirection(shipAngle);
-			shipVelocity.addScaledVector(forward, thrustInput * SHIP_ACCELERATION * delta);
-		}
-
-		if (brakeInput > 0) {
-			const brakeFactor = Math.max(0.55, 1 - brakeInput * SHIP_BRAKE * delta);
-			shipVelocity.multiplyScalar(brakeFactor);
-		} else {
-			shipVelocity.multiplyScalar(Math.pow(SHIP_DRAG, delta * 60));
-		}
-
-		clampVectorLength(shipVelocity, SHIP_MAX_SPEED);
-
-		ship.entity.moveXY(shipVelocity.x, shipVelocity.y);
-		ship.entity.setRotation(0, 0, shipAngle);
-		ship.entity.setPositionZ(0);
-
-		const shipPosition = ship.entity.getPosition();
-		if (!shipPosition) {
-			return;
-		}
-
-		const shipWorldPosition = new Vector3(shipPosition.x, shipPosition.y, shipPosition.z ?? 0);
-		ship.shield.setPosition(shipWorldPosition.x, shipWorldPosition.y, shipWorldPosition.z);
-		ship.shield.setPositionZ(shipWorldPosition.z);
-		setEntityVisibility(ship.shield, playerDamageCooldown > 0);
-		const thrusterPosition = shipWorldPosition
-			.clone()
-			.sub(getForwardDirection(shipAngle).multiplyScalar(0.92))
-			.add(getRightDirection(shipAngle).multiplyScalar(0.02));
-		alignParticleSystem(thrusterParticles, thrusterPosition, shipAngle + Math.PI);
-
-		if (thrustInput > 0.05) {
-			if (!thrusterParticles.isPlaying()) {
-				thrusterParticles.play();
+			if (thrustInput > 0) {
+				const forward = getForwardDirection(shipAngle);
+				shipVelocity.addScaledVector(
+					forward,
+					thrustInput * SHIP_ACCELERATION * delta,
+				);
 			}
-		} else if (thrusterParticles.isPlaying()) {
-			thrusterParticles.stop();
-		}
 
-		shootCooldown = Math.max(0, shootCooldown - delta);
-		if ((p1.buttons.A.pressed || p1.buttons.A.held > 0) && shootCooldown <= 0) {
-			const bulletSpawn = shipWorldPosition
-				.clone()
-				.add(getForwardDirection(shipAngle).multiplyScalar(1.55));
-			const bulletVelocity = getForwardDirection(shipAngle)
-				.multiplyScalar(BULLET_SPEED)
-				.add(shipVelocity.clone().multiplyScalar(0.35));
-			const bullet = createProjectile(
-				bulletSpawn,
-				bulletVelocity,
-				ship.entity.uuid,
-				(otherUuid, hitPosition, projectileGlobals) => {
-					return asteroidField.handleHitByUuid(otherUuid, hitPosition, projectileGlobals);
-				},
+			if (brakeInput > 0) {
+				const brakeFactor = Math.max(0.55, 1 - brakeInput * SHIP_BRAKE * delta);
+				shipVelocity.multiplyScalar(brakeFactor);
+			} else {
+				shipVelocity.multiplyScalar(Math.pow(SHIP_DRAG, delta * 60));
+			}
+
+			clampVectorLength(shipVelocity, SHIP_MAX_SPEED);
+
+			ship.entity.moveXY(shipVelocity.x, shipVelocity.y);
+			ship.entity.setRotation(0, 0, shipAngle);
+			ship.entity.setPositionZ(0);
+
+			const shipPosition = ship.entity.getPosition();
+			if (!shipPosition) {
+				return;
+			}
+
+			const shipWorldPosition = new Vector3(
+				shipPosition.x,
+				shipPosition.y,
+				shipPosition.z ?? 0,
 			);
-			stage.add(bullet);
-			triggerMuzzleFlash(shipWorldPosition, shipAngle);
-			shootCooldown = SHOOT_COOLDOWN_SECONDS;
-		}
-	})
+			ship.shield.setPosition(
+				shipWorldPosition.x,
+				shipWorldPosition.y,
+				shipWorldPosition.z,
+			);
+			ship.shield.setPositionZ(shipWorldPosition.z);
+			setEntityVisibility(ship.shield, playerDamageCooldown > 0);
+			const thrusterPosition = shipWorldPosition
+				.clone()
+				.sub(getForwardDirection(shipAngle).multiplyScalar(0.92))
+				.add(getRightDirection(shipAngle).multiplyScalar(0.02));
+			alignParticleSystem(
+				thrusterParticles,
+				thrusterPosition,
+				shipAngle + Math.PI,
+			);
+
+			if (thrustInput > 0.05) {
+				if (!thrusterParticles.isPlaying()) {
+					thrusterParticles.play();
+				}
+			} else if (thrusterParticles.isPlaying()) {
+				thrusterParticles.stop();
+			}
+
+			if (
+				(p1.buttons.A.pressed || p1.buttons.A.held > 0) &&
+				weapon.isReady('fire')
+			) {
+				const bulletSpawn = shipWorldPosition
+					.clone()
+					.add(getForwardDirection(shipAngle).multiplyScalar(1.55));
+				const bulletVelocity = getForwardDirection(shipAngle)
+					.multiplyScalar(BULLET_SPEED)
+					.add(shipVelocity.clone().multiplyScalar(0.35));
+				const bullet = createProjectile(
+					bulletSpawn,
+					bulletVelocity,
+					ship.entity.uuid,
+					(otherUuid, hitPosition, projectileGlobals) => {
+						return asteroidField.handleHitByUuid(
+							otherUuid,
+							hitPosition,
+							projectileGlobals,
+						);
+					},
+				);
+				stage.add(bullet);
+				triggerMuzzleFlash(shipWorldPosition, shipAngle);
+				weapon.fire('fire');
+			}
+		})
 		.onGlobalChange<number>('score', (score, currentStage) => {
 			updateScoreHud(score, currentStage as any);
 		})

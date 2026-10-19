@@ -33,18 +33,19 @@
     "server:publish:local": "pnpm run server:publish:arena && pnpm run server:publish:multiplayer-lobby",
     "server:start": "bash server/scripts/start-spacetimedb-server.sh",
     "server:dev": "pnpm run server:build && pnpm run server:publish:local",
-    "render:build": "bash scripts/render-build.sh"
+    "render:build": "bash scripts/render-build.sh",
+    "test:catalog": "node --experimental-strip-types --test tests/unit/catalog.test.ts"
   },
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
     "@solidjs/router": "^0.14.10",
     "@zylem/assets": "^0.1.1",
-    "@zylem/behaviors": "^0.5.8",
-    "@zylem/bridge": "^0.9.4",
-    "@zylem/editor": "^0.9.4",
-    "@zylem/game-lib": "^0.9.4",
+    "@zylem/behaviors": "^0.8.11",
+    "@zylem/bridge": "^0.9.6",
+    "@zylem/editor": "^0.9.9",
+    "@zylem/game-lib": "^0.9.6",
     "@zylem/shaders": "^0.1.2",
-    "@zylem/ui": "^0.8.13",
+    "@zylem/ui": "^0.9.3",
     "comlink": "^4.4.2",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
@@ -76,7 +77,10 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "msgpackr-extract"
-    ]
+    ],
+    "patchedDependencies": {
+      "@zylem/ui@0.9.3": "patches/@zylem__ui@0.9.3.patch"
+    }
   },
   "packageManager": "pnpm@10.33.0"
 }

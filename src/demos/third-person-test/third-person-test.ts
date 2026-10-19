@@ -1,150 +1,58 @@
-import { Vector3 } from 'three';
-import {
-	createCamera,
-	createGame,
-	createStage,
-	type StageEntity,
-	type UpdateContext,
-} from '@zylem/game-lib/core';
-import { createZone } from '@zylem/game-lib/entity';
-import { useArrowsForAxes } from '@zylem/game-lib/input';
-import { Platformer3DBehavior, Platformer3DState } from '@zylem/game-lib/behavior';
-import {
-	playgroundPlane,
-	playgroundActor,
-	playgroundPlatforms,
-} from '../../utils';
+import { repeatForever, rotateBy } from '@zylem/game-lib/actions';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { createSphere, createText, createZone } from '@zylem/game-lib/entity';
+import { Color } from 'three';
 import { demoAsset } from '../../assets/manifest';
-
-const skybox = demoAsset('general/skybox-default.png');
-
-/**
- * Loose alias for the player entity in this demo. The actor returned by
- * `playgroundActor` is typed `any`; we intentionally avoid importing the
- * internal `GameEntity` class.
- */
-type DemoPlayer = any;
-
-/** Matches `playgroundPlatforms()` start platform: center y=1, height 0.5. */
-const START_PLATFORM_TOP_Y = 1 + 0.5 / 2;
-const PLAYER_SPAWN = { x: 0, y: START_PLATFORM_TOP_Y, z: 15.5 };
+import { playgroundPlane, playgroundPlatforms } from '../../utils';
+import { trackEntity } from '../_shared/camera';
+import { movementControls } from '../_shared/controls';
+import { createPlayer } from '../_shared/player';
 
 export default function createDemo() {
-	const groundPlane = playgroundPlane('dirt');
-	const player = playgroundActor('player', undefined, PLAYER_SPAWN) as DemoPlayer & StageEntity;
-
-	const platforms = playgroundPlatforms();
-
+	const spawn = { x: 0, y: 3, z: 0 };
+	const player = createPlayer(spawn);
 	const camera = createCamera({
-		position: { x: 0, y: 8, z: 7 },
+		position: [0, 8, 12],
 		perspective: 'third-person',
 	});
-
-	// The platformer controller (KCC + jump FSM) runs inside the wasm runtime;
-	// this attaches it to the actor's simulation body.
-	const platformer = player.use(Platformer3DBehavior, {
-		walkSpeed: 6,
-		runSpeed: 12,
-		jumpForce: 12,
-		maxJumps: 2,
-		gravity: 9.82,
+	player.onSetup(() => {
+		trackEntity(camera, player);
 	});
-
-	const stage = createStage(
-		{
-			gravity: new Vector3(0, -9.82, 0),
-			backgroundImage: skybox,
-		},
-		camera,
-	).setInputConfiguration(useArrowsForAxes('p1'));
-
-	const startingZone = createZone({
-		position: { x: 0, y: 0, z: 0 },
-		size: { x: 10, y: 10, z: 10 },
-		onEnter: ({ self, visitor, globals }) => { },
-		onExit: ({ self, visitor, globals }) => { },
+	const status = createText({
+		text: 'Reach the golden goal',
+		screenPosition: { x: 0.5, y: 0.08 },
 	});
-
-	const endingZone = createZone({
-		position: { x: 0, y: 30, z: 0 },
-		size: { x: 10, y: 10, z: 10 },
-		onEnter: ({ self, visitor, globals }) => { },
-		onExit: ({ self, visitor, globals }) => { },
+	const goal = createSphere({
+		radius: 0.7,
+		position: [0, 16, 0],
+		color: new Color('#ffd166'),
 	});
-
-	stage.add(startingZone);
-	stage.add(endingZone);
-	stage.add(groundPlane);
-	stage.add(player);
-	stage.add(...platforms);
-
-	const game = createGame(
-		{
-			id: 'behaviors-test',
-			debug: true,
-			resolution: {
-				width: 800,
-				height: 600,
+	goal.runAction(repeatForever(rotateBy({ y: 360, duration: 2000 })));
+	const finish = createZone({ position: [0, 16, 0], size: [4, 4, 4] });
+	finish.onEnter(({ visitor }) => {
+		if (visitor.uuid === player.uuid)
+			status.updateText('Course complete! — R to restart');
+	});
+	player.onUpdate(({ me }) => {
+		if ((me.getPosition()?.y ?? 0) < -8) {
+			me.setPosition(spawn.x, spawn.y, spawn.z);
+			me.resetVelocity();
+		}
+	});
+	return createGame(
+		{ id: 'zario-64' },
+		createStage(
+			{
+				gravity: { x: 0, y: -20, z: 0 },
+				backgroundImage: demoAsset('general/skybox-default.png'),
 			},
-		},
-		stage,
+			camera,
+			playgroundPlane('dirt'),
+			...playgroundPlatforms(),
+			player,
+			goal,
+			finish,
+			status,
+		).setInputConfiguration(movementControls),
 	);
-
-	const lastMovement = new Vector3();
-	player.onSetup(({ me }: { me: DemoPlayer }) => {
-		camera.cameraRef.target = me;
-		me.setPosition(PLAYER_SPAWN.x, PLAYER_SPAWN.y, PLAYER_SPAWN.z);
-	});
-
-	player.onUpdate(({ inputs, me }: UpdateContext<any>) => {
-		const { p1 } = inputs;
-
-		const horizontal = p1.axes.Horizontal.value;
-		const vertical = p1.axes.Vertical.value;
-		const jumpHeld = p1.buttons.A.held > 0;
-		const runHeld = p1.shoulders.LTrigger.held > 0;
-
-		if (me.$platformer) {
-			me.$platformer.moveX = horizontal;
-			me.$platformer.moveZ = vertical;
-			me.$platformer.jump = jumpHeld;
-			me.$platformer.run = runHeld;
-		}
-
-		// Drive the actor's facing visually — the wasm capsule is upright-only.
-		if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
-			lastMovement.set(horizontal, 0, vertical);
-		}
-		if (lastMovement.lengthSq() > 0) {
-			const yaw = Math.atan2(lastMovement.x, lastMovement.z);
-			me.setRotationY(yaw);
-		}
-
-		// FSM state comes from the previous wasm step's snapshot buffer.
-		// One-frame animation lag is negligible.
-		const state = platformer.getState();
-		switch (state) {
-			case Platformer3DState.Running:
-				me.playAnimation({ key: 'running' });
-				break;
-			case Platformer3DState.Walking:
-				me.playAnimation({ key: 'walking' });
-				break;
-			case Platformer3DState.Jumping:
-				me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
-				break;
-			case Platformer3DState.Falling:
-				me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
-				break;
-			case Platformer3DState.Landing:
-				me.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
-				break;
-			case Platformer3DState.Idle:
-			default:
-				me.playAnimation({ key: 'idle' });
-				break;
-		}
-	});
-
-	return game;
 }

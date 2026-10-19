@@ -1,8 +1,13 @@
-import { Color, Vector3 } from 'three';
+import { ricochetSound } from '@zylem/game-lib/audio';
+import {
+  BoundaryRicochetCoordinator,
+  Ricochet2DBehavior,
+  WorldBoundary2DBehavior,
+} from '@zylem/game-lib/behavior';
 import { createGame } from '@zylem/game-lib/core';
 import { createSphere } from '@zylem/game-lib/entity';
-import { Ricochet2DBehavior, WorldBoundary2DBehavior, BoundaryRicochetCoordinator } from '@zylem/game-lib/behavior';
-import { ricochetSound } from '@zylem/game-lib/audio';
+import { Color } from 'three';
+import { ricochetEntity } from '../_shared/behavior';
 
 export default function createDemo() {
   const ball = createSphere({ color: new Color(Color.NAMES.red) });
@@ -23,7 +28,11 @@ export default function createDemo() {
     me.moveXY(3, 4);
   });
 
-  const coordinator = new BoundaryRicochetCoordinator(ball, boundary, ricochet);
+  const coordinator = new BoundaryRicochetCoordinator(
+    ricochetEntity(ball),
+    boundary,
+    ricochet,
+  );
 
   ricochet.onRicochet(() => {
     ricochetSound();

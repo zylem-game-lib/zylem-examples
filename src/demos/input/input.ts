@@ -1,7 +1,11 @@
-import { Color, Vector2 } from 'three';
 import { createGame, createStage } from '@zylem/game-lib/core';
 import { createText } from '@zylem/game-lib/entity';
-import { useArrowsForDirections, useIJKLForAxes, useMouse } from '@zylem/game-lib/input';
+import {
+  useArrowsForDirections,
+  useIJKLForAxes,
+  useMouse,
+} from '@zylem/game-lib/input';
+import { Color } from 'three';
 
 export default function createDemo() {
   const stage1 = createStage({
@@ -39,90 +43,56 @@ export default function createDemo() {
 
   const formatNumber = (num: number) => num.toFixed(2);
 
-  const myGame = createGame(stage1)
-    .onSetup(({ game }) => {
-      console.log(game);
-    })
-    .onUpdate(({ inputs }) => {
-      const { p1 } = inputs;
-      for (const [name, button] of Object.entries(p1.buttons)) {
-        if (button.pressed) {
-          inputText.updateText(`${name} just pressed`);
-        }
-        if (button.released) {
-          inputText.updateText(`${name} just released`);
-        }
-        if (button.held > 0) {
-          inputText.updateText(
-            `${name} held for ${formatNumber(button.held)} seconds`,
-          );
-        }
+  const myGame = createGame(stage1).onUpdate(({ inputs }) => {
+    const { p1 } = inputs;
+    const controls = { ...p1.buttons, ...p1.directions, ...p1.shoulders };
+    for (const [name, button] of Object.entries(controls)) {
+      if (button.pressed) inputText.updateText(`${name} just pressed`);
+      else if (button.released) inputText.updateText(`${name} just released`);
+      else if (button.held > 0)
+        inputText.updateText(
+          `${name} held for ${formatNumber(button.held)} seconds`,
+        );
+    }
+    for (const [name, axis] of Object.entries(p1.axes)) {
+      if (Math.abs(axis.value) >= 0.1) {
+        inputText.updateText(
+          `${name}: ${formatNumber(axis.value)} (held ${formatNumber(
+            axis.held,
+          )}s)`,
+        );
       }
-      for (const [name, direction] of Object.entries(p1.directions)) {
-        if (direction.pressed) {
-          inputText.updateText(`${name} just pressed`);
-        }
-        if (direction.released) {
-          inputText.updateText(`${name} just released`);
-        }
-        if (direction.held > 0) {
-          inputText.updateText(
-            `${name} held for ${formatNumber(direction.held)} seconds`,
-          );
-        }
-      }
-      for (const [name, shoulder] of Object.entries(p1.shoulders)) {
-        if (shoulder.pressed) {
-          inputText.updateText(`${name} just pressed`);
-        }
-        if (shoulder.released) {
-          inputText.updateText(`${name} just released`);
-        }
-        if (shoulder.held > 0) {
-          inputText.updateText(
-            `${name} held for ${formatNumber(shoulder.held)} seconds`,
-          );
-        }
-      }
-      for (const [name, axis] of Object.entries(p1.axes)) {
-        if (Math.abs(axis.value) >= 0.1) {
-          inputText.updateText(
-            `${name}: ${formatNumber(axis.value)} (held ${formatNumber(
-              axis.held,
-            )}s)`,
-          );
-        }
-      }
+    }
 
-      const ptr = p1.pointer;
-      const leftClick = p1.shoulders.LTrigger;
-      const rightClick = p1.shoulders.RTrigger;
-      const moveX = p1.axes.SecondaryHorizontal.value;
-      const moveY = p1.axes.SecondaryVertical.value;
-      const isDragging = leftClick.held > 0 && (moveX !== 0 || moveY !== 0);
+    const ptr = p1.pointer;
+    const leftClick = p1.shoulders.LTrigger;
+    const rightClick = p1.shoulders.RTrigger;
+    const moveX = p1.axes.SecondaryHorizontal.value;
+    const moveY = p1.axes.SecondaryVertical.value;
+    const isDragging = leftClick.held > 0 && (moveX !== 0 || moveY !== 0);
 
-      const pos = ptr
-        ? `position: (${formatNumber(ptr.x)}, ${formatNumber(ptr.y)})`
-        : 'position: <>';
-      const move = `move: (${formatNumber(moveX)}, ${formatNumber(moveY)})`;
-      const drag = isDragging ? 'dragging' : 'idle';
-      const left =
-        leftClick.held > 0
-          ? `L:${formatNumber(leftClick.held)}s`
-          : leftClick.released
+    const pos = ptr
+      ? `position: (${formatNumber(ptr.x)}, ${formatNumber(ptr.y)})`
+      : 'position: <>';
+    const move = `move: (${formatNumber(moveX)}, ${formatNumber(moveY)})`;
+    const drag = isDragging ? 'dragging' : 'idle';
+    const left =
+      leftClick.held > 0
+        ? `L:${formatNumber(leftClick.held)}s`
+        : leftClick.released
           ? 'L:released'
           : 'L:up';
-      const right =
-        rightClick.held > 0
-          ? `R:${formatNumber(rightClick.held)}s`
-          : rightClick.released
+    const right =
+      rightClick.held > 0
+        ? `R:${formatNumber(rightClick.held)}s`
+        : rightClick.released
           ? 'R:released'
           : 'R:up';
 
-      mouseInputText.updateText(
-        `${pos} | ${move} | ${drag} | ${left} | ${right}`,
-      );
-    });
+    mouseInputText.updateText(
+      `${pos} | ${move} | ${drag} | ${left} | ${right}`,
+    );
+  });
 
   return myGame;
 }
