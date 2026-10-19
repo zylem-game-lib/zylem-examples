@@ -42,7 +42,7 @@ Keep it current as implementation and validation progress.
 - [x] Typecheck and production build all source, including retained experiments.
 - [ ] Check catalog/navigation/editor and smoke-test all curated routes.
 - [ ] Exercise representative movement, score, restart and stage transitions.
-- [ ] Review diff, update this checklist and open a pull request.
+- [x] Review diff, update this checklist and open a draft pull request.
 
 Checked example entries below mean implementation and control documentation are
 complete. Browser rendering, editor integration and gameplay remain unverified
@@ -154,5 +154,6 @@ retained, with renamed Basic routes updated.
   state subscriptions, sprite/actor animation, collision audio and shaders.
 - [ ] Review mobile navigation and the controls overlay at narrow widths.
 
-Publication status: implementation is ready for a draft PR; gameplay review is
-an explicit remaining gate, not a passing validation claim.
+Publication status: [draft PR #1](https://github.com/zylem-game-lib/zylem-examples/pull/1)
+is open on `codex/refresh-examples-catalog`. Gameplay review is an explicit
+remaining gate, not a passing validation claim.
