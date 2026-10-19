@@ -1,5 +1,5 @@
 import { createBox, createPlane, createZone } from '@zylem/game-lib/entity';
-import { Vector2, Vector3, Color } from 'three';
+import { Vector3 } from 'three';
 
 import { demoAsset } from '../../assets/manifest';
 
@@ -39,7 +39,7 @@ export const createWall = (
 
 // Create a simple arena-style level
 export const createArenaLevel = () => {
-  const walls: any[] = [];
+  const walls: ReturnType<typeof createBox>[] = [];
   const wallHeight = 4;
   const wallThickness = 0.5;
   const arenaSize = 25;

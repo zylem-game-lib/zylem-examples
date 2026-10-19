@@ -1,3 +1,7 @@
+import { useLocation } from '@solidjs/router';
+import { editorEvents } from '@zylem/editor';
+import { zylemEventBus, type GameLoadingPayload } from '@zylem/game-lib/events';
+import { ZylemGameElement } from '@zylem/game-lib/web-components';
 import {
   Component,
   Show,
@@ -7,25 +11,21 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { useLocation } from '@solidjs/router';
-import { ZylemGameElement } from '@zylem/game-lib/web-components';
-import { zylemEventBus, type GameLoadingPayload } from '@zylem/game-lib/events';
-import { editorEvents } from '@zylem/editor';
-import { appStore } from '../../../store/appStore';
-import '../../../store/editorStateStore';
-import ViewportControls from '../ViewportControls/ViewportControls';
-import {
-  demoViewportStore,
-  setMeasuredViewportSize,
-} from '../../../store/demoViewportStore';
-import { isScreenshotModeSearch } from '../../../screenshot-mode';
+import { subscribe } from 'valtio/vanilla';
 import {
   multiplayerLobbyStore,
   resetMultiplayerLobbyForExampleSwitch,
 } from '../../../demos/multiplayer-lobby/multiplayer-lobby-store';
 import MultiplayerLobby from '../../../demos/multiplayer-lobby/MultiplayerLobby/MultiplayerLobby';
+import { isScreenshotModeSearch } from '../../../screenshot-mode';
+import { appStore } from '../../../store/appStore';
+import {
+  demoViewportStore,
+  setMeasuredViewportSize,
+} from '../../../store/demoViewportStore';
+import '../../../store/editorStateStore';
+import ViewportControls from '../ViewportControls/ViewportControls';
 import * as styles from './DemoViewer.css';
-import { subscribe } from 'valtio/vanilla';
 
 declare module 'solid-js' {
   namespace JSX {
@@ -81,6 +81,9 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   const [loading, setLoading] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
+  const [loadError, setLoadError] = createSignal('');
+  const [restartVersion, setRestartVersion] = createSignal(0);
+  const restart = () => setRestartVersion((version) => version + 1);
   const [multiplayerLobbyRev, setMultiplayerLobbyRev] = createSignal(0);
 
   const isMobileLayout = () => props.layout === 'mobile';
@@ -110,6 +113,25 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   };
 
   onMount(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.composedPath()[0];
+      const editing =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      if (
+        !editing &&
+        !event.repeat &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        event.key.toLowerCase() === 'r'
+      ) {
+        event.preventDefault();
+        restart();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    onCleanup(() => window.removeEventListener('keydown', onKeyDown));
     const unsubLobby = subscribe(
       multiplayerLobbyStore,
       () => setMultiplayerLobbyRev((n) => n + 1),
@@ -144,6 +166,7 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   });
 
   onCleanup(() => {
+    demoLoadGeneration++;
     zylemEventBus.off('loading:start', handleLoadingEvent);
     zylemEventBus.off('loading:progress', handleLoadingEvent);
     zylemEventBus.off('loading:complete', handleLoadingEvent);
@@ -163,17 +186,26 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
     const activeExample = appStore.activeExample;
     if (!activeExample) return;
 
+    restartVersion();
     const generation = ++demoLoadGeneration;
     setLoading(true);
     setProgress(0);
     setMessage('Loading...');
+    setLoadError('');
     setExample(null);
 
-    activeExample.load().then((gameModule) => {
-      if (generation !== demoLoadGeneration) return;
-      setExample(gameModule.default());
-      editorEvents.emit({ type: 'debug', payload: { enabled: true } });
-    });
+    activeExample
+      .load()
+      .then((gameModule) => {
+        if (generation !== demoLoadGeneration) return;
+        setExample(gameModule.default());
+        editorEvents.emit({ type: 'debug', payload: { enabled: true } });
+      })
+      .catch((error: unknown) => {
+        if (generation !== demoLoadGeneration) return;
+        setLoading(false);
+        setLoadError(error instanceof Error ? error.message : String(error));
+      });
   });
 
   const showMultiplayerLobby = () => {
@@ -191,6 +223,27 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
     >
       <Show when={!isMobileLayout() && !screenshotMode()}>
         <ViewportControls />
+      </Show>
+      <Show when={!screenshotMode()}>
+        <div
+          data-demo-guide
+          style={{
+            padding: '8px 16px',
+            color: '#d8e4ef',
+            background: '#10151d',
+            'font-size': '13px',
+          }}
+        >
+          <strong>{appStore.activeExample?.name}</strong> —{' '}
+          {appStore.activeExample?.description}
+          <div>{appStore.activeExample?.controls}</div>
+          <button type="button" onClick={restart}>
+            Restart example
+          </button>
+        </div>
+      </Show>
+      <Show when={loadError()}>
+        <p role="alert">Could not load this example: {loadError()}</p>
       </Show>
       <Show
         when={!screenshotMode()}

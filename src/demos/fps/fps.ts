@@ -1,165 +1,187 @@
-import { Euler, Vector3 } from 'three';
-import { createGame, createStage, createCamera, gameConfig, Perspectives, FirstPersonPerspective } from '@zylem/game-lib/core';
-import { createActor } from '@zylem/game-lib/entity';
-import { useWASDForAxes, useScreenCenterLook, screenCenterLookDeltas } from '@zylem/game-lib/input';
-import { FirstPersonShooterCoordinator, FirstPersonBehavior, Jumper3DBehavior } from '@zylem/game-lib/behavior';
-
-import { createFloor, createArenaLevel } from './level';
-
+import {
+	CooldownBehavior,
+	FirstPersonBehavior,
+	FirstPersonShooterCoordinator,
+	Jumper3DBehavior,
+	type FirstPersonShooterEntity,
+} from '@zylem/game-lib/behavior';
+import {
+	createCamera,
+	createGame,
+	createStage,
+	FirstPersonPerspective,
+	Perspectives,
+} from '@zylem/game-lib/core';
+import {
+	createActor,
+	createSphere,
+	createText,
+	destroy,
+} from '@zylem/game-lib/entity';
+import {
+	screenCenterLookDeltas,
+	useScreenCenterLook,
+	useWASDForAxes,
+} from '@zylem/game-lib/input';
+import { Color, Euler, Raycaster, Vector3 } from 'three';
 import { demoAsset } from '../../assets/manifest';
+import { withBehavior } from '../_shared/behavior';
+import { createArenaLevel, createFloor } from './level';
 
-const pistolGlb = demoAsset('general/player-gun.glb');
-const skybox = demoAsset('general/skybox-default.png');
-
-const LOOK_SENSITIVITY = 2;
-const MAX_LOOK_DEGREES = 180;
+const lookOptions = { maxLookDegrees: 180, lookSensitivity: 2 };
 
 export default function createDemo() {
-	// --- Camera ---
-
-	const fpsCamera = createCamera({
+	const camera = createCamera({
 		perspective: Perspectives.FirstPerson,
-		position: { x: 0, y: 2.85, z: 5 },
-		target: { x: 0, y: 1.9, z: 0 },
-		name: 'fps',
-		damping: 1,
+		position: [0, 2.85, 5],
 		skipDebugOrbit: true,
+		damping: 1,
 	});
-
-	fpsCamera.setPerspective(Perspectives.FirstPerson, {
-		initialPosition: { x: 0, y: 2.85, z: 5 },
-		initialLookAt: { x: 0, y: 1.9, z: 0 },
-		pitchLimit: Math.PI,
+	camera.setPerspective(Perspectives.FirstPerson, {
+		initialPosition: [0, 2.85, 5],
+		initialLookAt: [0, 2.85, 0],
+		pitchLimit: Math.PI / 2,
 	});
-
-	const fps = fpsCamera.getPerspective<FirstPersonPerspective>();
-
-	// --- Player (invisible physics capsule) ---
-
-	const player = createActor({
-		name: 'player',
-		collision: {
-			static: false,
-			size: { x: 1.6, y: 1.8, z: 0.6 },
-		},
-		position: { x: 0, y: 0.9, z: 5 },
-	});
-
-	// --- Pistol viewmodel (visual only — no physics body; parented to camera) ---
-
 	const pistol = createActor({
 		name: 'pistol',
-		models: [pistolGlb],
-		scale: { x: 0.42, y: 0.42, z: 0.42 },
-		position: { x: 0, y: 0, z: 0 },
+		models: [demoAsset('general/player-gun.glb')],
+		scale: [0.42, 0.42, 0.42],
 	});
-
-	// --- Behaviors ---
-
-	const fpsController = player.use(FirstPersonBehavior, {
-		perspective: fps,
+	const player = withBehavior(
+		createActor({
+			name: 'player',
+			position: [0, 0.9, 5],
+			collision: { static: false, size: [1.6, 1.8, 0.6] },
+		}),
+		Jumper3DBehavior,
+		{
+			jumpHeight: 2.5,
+			gravity: 20,
+			maxJumps: 2,
+			coyoteTimeMs: 100,
+			jumpBufferMs: 80,
+		},
+	);
+	const controller = player.use(FirstPersonBehavior, {
+		perspective: camera.getPerspective<FirstPersonPerspective>(),
 		walkSpeed: 8,
 		runSpeed: 16,
-		lookSensitivity: LOOK_SENSITIVITY,
+		lookSensitivity: lookOptions.lookSensitivity,
 		eyeHeight: 1.95,
 		viewmodel: {
 			entity: pistol,
-			// Camera-local: +X right, +Y up, −Z forward
-			offset: { x: 0.25, y: -0.52, z: -0.40 },
+			offset: [0.25, -0.52, -0.4],
 			rotation: new Euler(0, -1.6, -0.08),
-			cameraObject: fpsCamera.cameraRef.camera,
+			cameraObject: camera.cameraRef.camera,
 		},
 	});
-
-	const jumper = player.use(Jumper3DBehavior, {
-		jumpHeight: 2.5,
-		gravity: 20,
-		maxJumps: 2,
-		coyoteTimeMs: 100,
-		jumpBufferMs: 80,
-		snapToGroundDistance: 0.15,
-		variableJump: { enabled: true, cutGravityMultiplier: 3 },
-		fall: { fallGravityMultiplier: 1.5 },
-	});
-
-	const fpsShooter = new FirstPersonShooterCoordinator(
-		player as any,
-		fpsController,
-		jumper,
+	// The coordinator accepts the two behavior inputs attached above.
+	const movement = new FirstPersonShooterCoordinator(
+		player as typeof player & FirstPersonShooterEntity,
+		controller,
 	);
-
-	// --- Stage + input ---
-
+	const weapon = player.use(CooldownBehavior, {
+		cooldowns: { fire: { duration: 0.2 } },
+	});
+	const targets = [
+		[-6, 3, -5],
+		[0, 3, -12],
+		[7, 3, -8],
+		[-10, 3, 8],
+		[10, 3, 12],
+	].map(([x, y, z], index) =>
+		createSphere({
+			name: `target-${index}`,
+			radius: 0.8,
+			position: [x!, y!, z!],
+			color: new Color('#e8a64a'),
+			collision: { static: true },
+		}),
+	);
+	const remaining = new Set(targets);
+	const score = createText({
+		text: 'Targets: 0/5',
+		screenPosition: { x: 0.5, y: 0.08 },
+	});
+	const crosshair = createText({
+		text: '+',
+		screenPosition: { x: 0.5, y: 0.5 },
+		fontSize: 24,
+	});
+	const ray = new Raycaster();
+	const origin = new Vector3();
+	const direction = new Vector3();
+	const floor = createFloor();
+	const walls = createArenaLevel();
 	const stage = createStage(
 		{
 			gravity: { x: 0, y: -20, z: 0 },
-			backgroundImage: skybox,
+			backgroundImage: demoAsset('general/skybox-default.png'),
 		},
-		fpsCamera,
-	);
-
-	stage.setInputConfiguration(
-		useWASDForAxes('p1'),
-		useScreenCenterLook('p1', {
-			maxLookDegrees: MAX_LOOK_DEGREES,
-			lookSensitivity: LOOK_SENSITIVITY,
-		}),
-		{
-		p1: {
-			key: {
-				' ': ['buttons.a'],
-			},
-		},
-	});
-
-	// --- Entities ---
-
-	const floor = createFloor();
-	const walls = createArenaLevel();
-
-	// --- Game ---
-
-	const myGameConfig = gameConfig({
-		id: 'fps-demo',
-		debug: true,
-		bodyBackground: '#1a1a1a',
-		resolution: {
-			width: 800,
-			height: 600,
-		},
-	});
-
-	fpsCamera.addTarget(player);
-
-	const game = createGame(
-		myGameConfig,
-		stage,
+		camera,
 		floor,
 		...walls,
 		player,
 		pistol,
-	).onUpdate(({ inputs }) => {
+		...targets,
+		score,
+		crosshair,
+	).setInputConfiguration(
+		useWASDForAxes('p1'),
+		useScreenCenterLook('p1', lookOptions),
+		{
+			p1: {
+				key: { ' ': ['buttons.A'], Shift: ['buttons.B'], f: ['buttons.X'] },
+			},
+		},
+	);
+
+	stage.onUpdate(({ inputs }) => {
 		const { p1 } = inputs;
 		const pointer = p1.pointer ?? { centerX: 0, centerY: 0 };
-		const { lookX, lookY } = screenCenterLookDeltas(
+		const look = screenCenterLookDeltas(
 			pointer.centerX,
 			pointer.centerY,
-			fpsController.getYaw(),
-			fpsController.getPitch(),
-			{ maxLookDegrees: MAX_LOOK_DEGREES, lookSensitivity: LOOK_SENSITIVITY },
+			controller.getYaw(),
+			controller.getPitch(),
+			lookOptions,
 		);
-
-		fpsShooter.update({
+		movement.update({
 			moveX: p1.axes.Horizontal.value,
 			moveZ: -p1.axes.Vertical.value,
-			lookX,
-			lookY,
-			sprint: p1.shoulders.LTrigger.held > 0,
+			...look,
+			sprint: p1.buttons.B.held > 0,
 			jumpPressed: p1.buttons.A.pressed,
 			jumpHeld: p1.buttons.A.held > 0,
 			jumpReleased: p1.buttons.A.released,
 		});
+		if (!p1.buttons.X.held || !weapon.isReady('fire') || remaining.size === 0)
+			return;
+		weapon.fire('fire');
+		const view = camera.cameraRef.camera;
+		view.getWorldPosition(origin);
+		view.getWorldDirection(direction);
+		ray.set(origin, direction);
+		// Include walls so targets cannot be shot through the arena.
+		const objects = [...remaining, floor, ...walls].flatMap((entity) =>
+			entity.group ? [entity.group] : [],
+		);
+		const hit = ray.intersectObjects(objects, true)[0];
+		if (!hit) return;
+		const target = [...remaining].find((entity) => {
+			let object = hit.object;
+			while (object.parent && object !== entity.group) object = object.parent;
+			return object === entity.group;
+		});
+		if (target) {
+			remaining.delete(target);
+			destroy(target);
+			score.updateText(
+				remaining.size
+					? `Targets: ${5 - remaining.size}/5`
+					: 'All targets cleared! — R to restart',
+			);
+		}
 	});
-
-	return game;
+	return createGame({ id: 'zylem-strike' }, stage);
 }

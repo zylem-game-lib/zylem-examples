@@ -1,5 +1,4 @@
-import { Color } from 'three';
-import { createBox, createSprite } from '@zylem/game-lib/entity';
+import { Platformer2DBehavior } from '@zylem/game-lib/behavior';
 import {
 	createCamera,
 	createFollowTarget,
@@ -7,18 +6,22 @@ import {
 	createStage,
 	Perspectives,
 } from '@zylem/game-lib/core';
-import { bricks } from '@zylem/shaders';
-import { Platformer2DBehavior, Platformer2DState } from '@zylem/game-lib/behavior';
 import {
-	mergeInputConfigs,
-	useArrowsForAxes,
-	useWASDForAxes,
-} from '@zylem/game-lib/input';
+	createBox,
+	createSprite,
+	createText,
+	createZone,
+} from '@zylem/game-lib/entity';
+import { bricks } from '@zylem/shaders';
+import { Color } from 'three';
 import {
 	ZYLEM_MAN_ANIMATIONS,
 	ZYLEM_MAN_METRICS,
 	ZYLEM_MAN_SHEET,
 } from '../../assets/zylem-man-atlas';
+import { withBehavior } from '../_shared/behavior';
+import { trackEntity } from '../_shared/camera';
+import { movementControls } from '../_shared/controls';
 
 // ── Character dimensions, derived from the packed atlas ─────────────────────
 
@@ -32,48 +35,17 @@ const QUAD_WIDTH =
 	QUAD_HEIGHT * (ZYLEM_MAN_METRICS.cellWidth / ZYLEM_MAN_METRICS.cellHeight);
 /** Distance from the sprite's centre down to the shared foot line. */
 const FOOT_OFFSET =
-	QUAD_HEIGHT * (0.5 - ZYLEM_MAN_METRICS.baseline / ZYLEM_MAN_METRICS.cellHeight);
+	QUAD_HEIGHT *
+	(0.5 - ZYLEM_MAN_METRICS.baseline / ZYLEM_MAN_METRICS.cellHeight);
 
 const BODY_RADIUS = 0.35;
 const BODY_HALF_HEIGHT = FOOT_OFFSET - BODY_RADIUS;
 
-// ── Movement feel ───────────────────────────────────────────────────────────
-
-/** Top speed tapping a direction. */
 const WALK_SPEED = 5.5;
-/** Top speed with the dash button held; also the runtime's speed multiplier. */
 const DASH_SPEED = 9.5;
-const GROUND_ACCEL = 22;
-const AIR_ACCEL = 16;
-const GROUND_FRICTION = 30;
-const AIR_FRICTION = 4;
-/** Turnaround braking. The gap against GROUND_ACCEL is what sells the skid. */
-const SKID_DECEL = 55;
-const DUCK_FRICTION = 40;
-
-const INPUT_DEADZONE = 0.2;
-/** Below this the character reads as standing still. */
-const IDLE_SPEED = 0.25;
-/** Above this the run cycle replaces the walk cycle. */
-const RUN_THRESHOLD = 6.2;
-/** Minimum speed for a direction reversal to read as a skid rather than a turn. */
-const SKID_SPEED = 2.5;
-/** How long the landing crouch shows after touching down, in seconds. */
-const LANDING_TIME = 0.09;
-
-/** The sheet has no dedicated skid pose; the launch lunge reads closest. */
-const SKID_FRAME = 'jump-0';
 const RISING_FRAME = 'jump-1';
 const FALLING_FRAME = 'jump-2';
-const LANDING_FRAME = 'jump-3';
-
 const GROUND_TOP = -5;
-
-function approach(value: number, target: number, maxDelta: number): number {
-	return value < target
-		? Math.min(value + maxDelta, target)
-		: Math.max(value - maxDelta, target);
-}
 
 export default function createDemo() {
 	const terrainShader = {
@@ -144,103 +116,74 @@ export default function createDemo() {
 		}),
 	);
 
-	const player = createSprite({
-		name: 'zylem-man',
-		position: { x: -14, y: GROUND_TOP + FOOT_OFFSET + 1, z: 0 },
-		size: { x: QUAD_WIDTH, y: QUAD_HEIGHT, z: 1 },
-		collisionSize: { x: BODY_RADIUS * 2, y: FOOT_OFFSET * 2, z: BODY_RADIUS * 2 },
-		sheet: ZYLEM_MAN_SHEET,
-		animations: ZYLEM_MAN_ANIMATIONS,
-	});
-
-	const platformer = player.use(Platformer2DBehavior, {
-		// moveX carries the whole velocity curve, so runSpeed is a plain scale
-		// factor rather than a second speed tier. See the update loop.
-		walkSpeed: DASH_SPEED,
-		runSpeed: DASH_SPEED,
-		jumpForce: 14,
-		gravity: 34,
-		maxJumps: 1,
-		coyoteTime: 0.08,
-		jumpBufferTime: 0.1,
-		jumpCutMultiplier: 0.45,
-		autostep: { maxHeight: 0.35, minWidth: 0.05 },
-		snapToGroundDistance: 0.2,
-		useAttachedCollider: false,
-		shape: { halfHeight: BODY_HALF_HEIGHT, radius: BODY_RADIUS },
-	});
-
-	let velocityX = 0;
-	let facingLeft = false;
-	let landingTimer = 0;
-	let wasGrounded = true;
+	const player = withBehavior(
+		createSprite({
+			name: 'zylem-man',
+			position: { x: -14, y: GROUND_TOP + FOOT_OFFSET + 1, z: 0 },
+			size: { x: QUAD_WIDTH, y: QUAD_HEIGHT, z: 1 },
+			collisionSize: {
+				x: BODY_RADIUS * 2,
+				y: FOOT_OFFSET * 2,
+				z: BODY_RADIUS * 2,
+			},
+			sheet: ZYLEM_MAN_SHEET,
+			animations: ZYLEM_MAN_ANIMATIONS,
+		}),
+		Platformer2DBehavior,
+		{
+			walkSpeed: WALK_SPEED,
+			runSpeed: DASH_SPEED,
+			jumpForce: 14,
+			gravity: 34,
+			maxJumps: 1,
+			coyoteTime: 0.08,
+			jumpBufferTime: 0.1,
+			jumpCutMultiplier: 0.45,
+			autostep: { maxHeight: 0.35, minWidth: 0.05 },
+			snapToGroundDistance: 0.2,
+			useAttachedCollider: false,
+			shape: { halfHeight: BODY_HALF_HEIGHT, radius: BODY_RADIUS },
+		},
+	);
 
 	player.onUpdate(({ me, inputs, delta }) => {
-		const { p1 } = inputs;
-		const intent = (me as any).$platformer2D;
-		if (!intent) return;
+		const { axes, buttons } = inputs.p1;
+		me.$platformer2D.moveX = axes.Horizontal.value;
+		me.$platformer2D.run = buttons.B.held > 0;
+		me.$platformer2D.jump = buttons.A.held > 0;
+		if (axes.Horizontal.value !== 0) me.setFlipX(axes.Horizontal.value < 0);
+		if (!me.platformer2DState.grounded)
+			me.setSprite(me.platformer2DState.jumping ? RISING_FRAME : FALLING_FRAME);
+		else
+			me.setAnimation(
+				Math.abs(axes.Horizontal.value) < 0.1
+					? 'idle'
+					: buttons.B.held > 0
+						? 'run'
+						: 'walk',
+				delta,
+			);
+	});
 
-		const grounded = platformer.isGrounded();
-		const axis = p1.axes.Horizontal.value;
-		const direction = Math.abs(axis) > INPUT_DEADZONE ? Math.sign(axis) : 0;
-		const dashHeld = p1.buttons.B.held > 0 || p1.shoulders.LTrigger.held > 0;
-		const ducking = grounded && p1.axes.Vertical.value > 0.5;
-		const reversing =
-			direction !== 0 && velocityX !== 0 && Math.sign(velocityX) !== direction;
-		const skidding = grounded && reversing && Math.abs(velocityX) > SKID_SPEED;
-
-		if (ducking) {
-			velocityX = approach(velocityX, 0, DUCK_FRICTION * delta);
-		} else if (direction === 0) {
-			const friction = grounded ? GROUND_FRICTION : AIR_FRICTION;
-			velocityX = approach(velocityX, 0, friction * delta);
-		} else {
-			const topSpeed = dashHeld ? DASH_SPEED : WALK_SPEED;
-			const accel = reversing ? SKID_DECEL : grounded ? GROUND_ACCEL : AIR_ACCEL;
-			velocityX += direction * accel * delta;
-
-			// Letting go of dash bleeds the extra speed off gradually instead of
-			// snapping down to the walk cap.
-			if (Math.sign(velocityX) === direction && Math.abs(velocityX) > topSpeed) {
-				const friction = grounded ? GROUND_FRICTION : AIR_FRICTION;
-				velocityX = approach(velocityX, direction * topSpeed, friction * delta);
-			}
-		}
-		velocityX = Math.min(DASH_SPEED, Math.max(-DASH_SPEED, velocityX));
-
-		// The runtime applies `moveX * runSpeed` with no acceleration of its own,
-		// so `run` stays pinned and the fractional axis carries the momentum model.
-		intent.run = true;
-		intent.moveX = velocityX / DASH_SPEED;
-		intent.jump = p1.buttons.A.held > 0;
-
-		if (grounded && !wasGrounded) landingTimer = LANDING_TIME;
-		if (landingTimer > 0) landingTimer -= delta;
-		wasGrounded = grounded;
-
-		if (skidding) {
-			facingLeft = velocityX < 0;
-		} else if (direction !== 0 && !ducking) {
-			facingLeft = direction < 0;
-		}
-		me.setFlipX(facingLeft);
-
-		const speed = Math.abs(velocityX);
-		if (!grounded) {
-			const rising = platformer.getState() === Platformer2DState.Jumping;
-			me.setSprite(rising ? RISING_FRAME : FALLING_FRAME);
-		} else if (ducking) {
-			me.setAnimation('duck', delta);
-		} else if (skidding) {
-			me.setSprite(SKID_FRAME);
-		} else if (landingTimer > 0) {
-			me.setSprite(LANDING_FRAME);
-		} else if (speed > RUN_THRESHOLD) {
-			me.setAnimation('run', delta * (speed / DASH_SPEED));
-		} else if (speed > IDLE_SPEED) {
-			me.setAnimation('walk', delta * (speed / WALK_SPEED));
-		} else {
-			me.setAnimation('idle', delta);
+	const status = createText({
+		text: 'Reach the flag on the right',
+		screenPosition: { x: 0.5, y: 0.08 },
+	});
+	const flag = createBox({
+		position: [72, -2, 0],
+		size: [0.3, 6, 0.3],
+		color: new Color('#ffd166'),
+		collision: { static: true },
+	});
+	const finish = createZone({ position: [70, -2, 0], size: [3, 7, 2] });
+	finish.onEnter(({ visitor }) => {
+		if (visitor.uuid === player.uuid)
+			status.updateText('Course complete! — R to restart');
+	});
+	player.onUpdate(({ me }) => {
+		if ((me.getPosition()?.y ?? 0) < -12) {
+			me.setPosition(-14, GROUND_TOP + FOOT_OFFSET + 1, 0);
+			me.resetVelocity();
 		}
 	});
 
@@ -259,8 +202,8 @@ export default function createDemo() {
 		},
 	});
 
-	player.onSetup(({ me }: any) => {
-		camera.addTarget(me);
+	player.onSetup(({ me }) => {
+		trackEntity(camera, me);
 	});
 
 	const stage = createStage(
@@ -269,14 +212,21 @@ export default function createDemo() {
 		},
 		camera,
 	);
-	stage.add(ground, ...walls, ...steps, ...platforms, player);
-	stage.setInputConfiguration(
-		mergeInputConfigs(useArrowsForAxes('p1'), useWASDForAxes('p1')),
+	stage.add(
+		ground,
+		...walls,
+		...steps,
+		...platforms,
+		player,
+		flag,
+		finish,
+		status,
 	);
+	stage.setInputConfiguration(movementControls);
 
 	const game = createGame(
 		{
-			id: 'jumper-2d',
+			id: 'zario',
 			debug: true,
 		},
 		stage,

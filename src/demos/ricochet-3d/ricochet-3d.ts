@@ -1,7 +1,12 @@
-import { Color, Vector3 } from 'three';
-import { BoundaryRicochet3DCoordinator, Ricochet3DBehavior, WorldBoundary3DBehavior } from '@zylem/game-lib/behavior';
-import { createBox, createSphere } from '@zylem/game-lib/entity';
+import {
+  BoundaryRicochet3DCoordinator,
+  Ricochet3DBehavior,
+  WorldBoundary3DBehavior,
+} from '@zylem/game-lib/behavior';
 import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { createBox, createSphere } from '@zylem/game-lib/entity';
+import { Color } from 'three';
+import { ricochetEntity } from '../_shared/behavior';
 
 export default function createDemo() {
   const cubeHalfSize = 6;
@@ -52,7 +57,7 @@ export default function createDemo() {
     front: cubeHalfSize - boundaryInset,
   } as const;
 
-  const walls = wallDefinitions.map(wall =>
+  const walls = wallDefinitions.map((wall) =>
     createBox({
       name: wall.name,
       position: wall.position,
@@ -94,7 +99,7 @@ export default function createDemo() {
       padding: ballRadius,
     });
     const coordinator = new BoundaryRicochet3DCoordinator(
-      entity,
+      ricochetEntity(entity),
       boundary,
       ricochet,
     );

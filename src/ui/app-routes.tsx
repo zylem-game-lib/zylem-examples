@@ -1,15 +1,15 @@
 import type { RouteDefinition } from '@solidjs/router';
-import { examples } from '../examples-config';
-import ExampleWorkspace from './ExampleWorkspace';
+import { exampleRoutePaths } from '../examples-config';
 import { HOME_ROUTE } from '../router-config';
+import ExampleWorkspace from './ExampleWorkspace';
 
 export const appRoutes: RouteDefinition[] = [
   {
     path: HOME_ROUTE,
     component: ExampleWorkspace,
   },
-  ...examples.map((example) => ({
-    path: example.routePath,
+  ...exampleRoutePaths.map((routePath) => ({
+    path: routePath,
     component: ExampleWorkspace,
   })),
 ];

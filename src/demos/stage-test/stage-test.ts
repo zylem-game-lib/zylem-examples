@@ -1,5 +1,6 @@
 import { createGame, gameConfig } from '@zylem/game-lib/core';
 import { createStageTransition } from '@zylem/shaders';
+import { movementControls } from '../_shared/controls';
 import { createStageZero } from './stage0';
 import { createStageOne } from './stage1';
 import { createStageTwo } from './stage2';
@@ -22,11 +23,13 @@ export default function createDemo() {
 
   const game = createGame(
     myGameConfig,
-    createStageZero(),
-    createStageOne(),
-    createStageTwo(),
-    createStageThree(),
-  ).onUpdate(({ me, inputs }) => {
+    ...[
+      createStageZero(),
+      createStageOne(),
+      createStageTwo(),
+      createStageThree(),
+    ].map((stage) => stage.setInputConfiguration(movementControls)),
+  ).onUpdate(({ inputs }) => {
     const { p1 } = inputs;
 
     if (p1.buttons.A.pressed) {
@@ -34,7 +37,7 @@ export default function createDemo() {
         transition: { duration: 1.2, shader: noiseDissolve },
       });
     }
-    if (p1.buttons.B.pressed) {
+    if (p1.buttons.Select.pressed) {
       game.previousStage({
         transition: { duration: 0.8, shader: wipeLeft },
       });
