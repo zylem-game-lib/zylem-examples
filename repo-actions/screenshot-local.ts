@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
-const BASE_URL = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:3331';
+const BASE_URL = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:9001';
 const EXAMPLES_HEALTHCHECK_PATH = '/src/examples-config.ts';
 const SERVER_READY_TIMEOUT_MS = 60_000;
 const CHECK_INTERVAL_MS = 1_000;
@@ -102,7 +102,7 @@ async function main() {
 	try {
 		if (!(await isServerReady(BASE_URL))) {
 			const host = screenshotServerUrl.hostname || '127.0.0.1';
-			const preferredPort = Number(screenshotServerUrl.port || '3331');
+			const preferredPort = Number(screenshotServerUrl.port || '9001');
 			const port = await findFreePort(preferredPort);
 			if (port !== preferredPort) {
 				console.log(

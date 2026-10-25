@@ -5,7 +5,7 @@ import { getDemoRoutePath, getDemoRouteSlug } from '../src/router-config.ts';
 import { SCREENSHOT_MODE_SEARCH_PARAM } from '../src/screenshot-mode.ts';
 import { OUTPUT_DIR, archiveOrphanScreenshots, collectDemoIds } from './screenshot-workflow.ts';
 
-const BASE_URL = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:3331';
+const BASE_URL = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:9001';
 const SCREENSHOT_TARGET_SELECTOR = '[data-demo-screenshot-target]';
 const LOADING_OVERLAY_SELECTOR = '[data-demo-loading-overlay]';
 const SETTLE_DELAY_MS = 1000;

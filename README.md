@@ -20,12 +20,12 @@ pnpm install
 pnpm dev
 ```
 
-Vite serves the app on [http://localhost:3331](http://localhost:3331) by default.
+Vite serves the app on [http://localhost:9001](http://localhost:9001) by default.
 
 ### Multiplayer (optional)
 
 ```bash
-pnpm server:start          # terminal A — SpacetimeDB on 127.0.0.1:3000
+pnpm server:start          # terminal A — SpacetimeDB on 127.0.0.1:2001
 pnpm server:dev            # terminal B — build + publish local DBs
 pnpm dev                   # terminal C — Vite client
 ```

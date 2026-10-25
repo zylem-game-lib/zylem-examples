@@ -54,14 +54,14 @@ Output path: [../src/demos/multiplayer-lobby/spacetimedb-generated](../src/demos
 ```sh
 pnpm run build                     # spacetimedb-cli build -p spacetimedb
 pnpm run generate:bindings         # emit TS client bindings to ./src/spacetimedb-generated
-pnpm run start:server              # local start on 127.0.0.1:3000 with data in server/.data/spacetimedb
+pnpm run start:server              # local start on 127.0.0.1:2001 with data in server/.data/spacetimedb
 pnpm run publish:arena             # publish to local server as database `arena`
 pnpm run publish:multiplayer-lobby # publish to local server as database `multiplayer-lobby`
 pnpm run publish:local             # both publish:arena and publish:multiplayer-lobby
 pnpm run dev                       # build then publish:local
 ```
 
-For `publish:local` and `dev`, start the standalone server first (`pnpm run start:server` or `spacetime start`). The package script defaults to `127.0.0.1:3000` and stores local data in `server/.data/spacetimedb`.
+For `publish:local` and `dev`, start the standalone server first (`pnpm run start:server` or `spacetime start`). The package script defaults to `127.0.0.1:2001` and stores local data in `server/.data/spacetimedb`.
 
 Override the local defaults with `SPACETIME_SERVER_LISTEN_ADDR`, `SPACETIME_SERVER_DATA_DIR`, or explicit CLI flags after `--`, for example `pnpm run start:server -- --in-memory`.
 

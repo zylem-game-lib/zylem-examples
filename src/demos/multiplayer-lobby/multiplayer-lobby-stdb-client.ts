@@ -7,7 +7,7 @@ export const MULTIPLAYER_LOBBY_MODULE_NAME = 'multiplayer-lobby';
 
 /**
  * WebSocket base URL for SpacetimeDB (see SpacetimeDB TS SDK: use `ws://` / `wss://`).
- * - **Dev:** defaults to `ws://127.0.0.1:3000`.
+ * - **Dev:** defaults to `ws://127.0.0.1:2001`.
  * - **Production:** set `VITE_STDB_URI` to the public HTTPS origin (e.g. another Render service), or omit it when the examples app and SpacetimeDB share the same origin (Docker nginx image) so `window.location.origin` is used.
  * See `server/README.md` (Render deploy) and `.env.production.example`.
  */
@@ -22,7 +22,7 @@ export function getMultiplayerLobbySpacetimeUri(): string {
       return normalizeSpacetimeClientUri(origin);
     }
   }
-  return normalizeSpacetimeClientUri('ws://127.0.0.1:3000');
+  return normalizeSpacetimeClientUri('ws://127.0.0.1:2001');
 }
 
 function getBrowserLocationOrigin(): string | null {

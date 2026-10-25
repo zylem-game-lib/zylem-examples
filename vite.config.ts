@@ -18,7 +18,7 @@ const additionalAllowedHosts = (process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOS
 	.map(host => host.trim())
 	.filter(Boolean);
 const allowedHosts = [...new Set([...defaultAllowedHosts, ...additionalAllowedHosts])];
-const devPort = Number(process.env.PORT ?? '3331');
+const devPort = Number(process.env.PORT ?? '9001');
 
 /**
  * HTTPS agent that resolves hostnames via direct DNS queries (Cloudflare
@@ -137,7 +137,7 @@ export default defineConfig({
 		],
 	},
 	server: {
-		port: Number.isFinite(devPort) ? devPort : 3331,
+		port: Number.isFinite(devPort) ? devPort : 9001,
 		open: shouldOpenBrowser,
 		allowedHosts,
 		fs: {
