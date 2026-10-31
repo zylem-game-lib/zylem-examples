@@ -158,6 +158,19 @@ export function orientShipModel(ship: ShipRuntime['entity']) {
 	modelRoot.rotation.set(SHIP_MODEL_TILT_X, 0, SHIP_MODEL_YAW_OFFSET);
 }
 
+export const SHIP_BULLET_RADIUS = 0.09;
+const BULLET_HIT_FLASH_SECONDS = 0.08;
+const BULLET_HIT_FLASH_SCALE = 4.2;
+
+export const shipBulletMaterial = {
+	color: new Color('#ffe08a'),
+	glow: {
+		intensity: 3.2,
+		size: 0.045,
+		falloff: 1.5,
+	},
+};
+
 export function createProjectile(
 	position: Vector3,
 	velocity: Vector3,
@@ -170,14 +183,15 @@ export function createProjectile(
 ) {
 	const bullet = createSphere({
 		name: '3d-asteroids-projectile',
-		radius: 0.14,
+		radius: SHIP_BULLET_RADIUS,
 		position: { x: position.x, y: position.y, z: 0 },
-		material: {
-			color: new Color('#ffe08a'),
-		},
+		material: shipBulletMaterial,
 	});
 
 	let lifetime = 1.15;
+	let flashing = false;
+	let flashElapsed = 0;
+	const flashPosition = new Vector3();
 
 	bullet.onSetup(({ me }) => {
 		me.body?.setGravityScale(0, true);
@@ -185,6 +199,19 @@ export function createProjectile(
 	});
 
 	bullet.onUpdate(({ me, delta }) => {
+		if (flashing) {
+			flashElapsed += delta;
+			const linear = Math.min(1, flashElapsed / BULLET_HIT_FLASH_SECONDS);
+			const eased = 1 - (1 - linear) * (1 - linear);
+			const scale = 1 + (BULLET_HIT_FLASH_SCALE - 1) * eased;
+			me.setScale(scale, scale, scale);
+			me.setPosition(flashPosition.x, flashPosition.y, 0);
+			if (linear >= 1) {
+				destroy(me);
+			}
+			return;
+		}
+
 		lifetime -= delta;
 		me.moveXY(velocity.x, velocity.y);
 		me.setPositionZ(0);
@@ -201,7 +228,7 @@ export function createProjectile(
 	});
 
 	bullet.onCollision(({ entity, other, globals }) => {
-		if (other.uuid === sourceUuid) {
+		if (flashing || other.uuid === sourceUuid) {
 			return;
 		}
 
@@ -215,9 +242,14 @@ export function createProjectile(
 			new Vector3(hitPosition.x, hitPosition.y, hitPosition.z ?? 0),
 			globals,
 		);
-		if (didHitAsteroid) {
-			destroy(entity, globals);
+		if (!didHitAsteroid) {
+			return;
 		}
+
+		flashing = true;
+		flashPosition.set(hitPosition.x, hitPosition.y, 0);
+		entity.body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+		entity.setPosition(flashPosition.x, flashPosition.y, 0);
 	}, {
 		phase: 'enter',
 	});

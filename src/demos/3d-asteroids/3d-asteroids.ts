@@ -3,8 +3,10 @@ import {
 	DirectionalLight,
 	HemisphereLight,
 	Vector3,
+	type Object3D,
 } from 'three';
 import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { createSphere } from '@zylem/game-lib/entity';
 import { setGlobal } from '@zylem/game-lib/globals';
 import { useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import { createAsteroidField } from './asteroid';
@@ -23,6 +25,8 @@ import {
 	createShip,
 	orientShipModel,
 	setEntityVisibility,
+	SHIP_BULLET_RADIUS,
+	shipBulletMaterial,
 } from './ship';
 import {
 	BULLET_SPEED,
@@ -40,6 +44,7 @@ import {
 	getRightDirection,
 } from './shared';
 import { starfieldTSL } from '../_shared/starfield.tsl';
+import { compileScene } from './gpu-warmup';
 
 const GAME_OVER_HUD_DELAY_SECONDS = 0.45;
 
@@ -96,6 +101,25 @@ export default function createDemo() {
 		}
 	});
 
+	stage.onSetup(() => {
+		effectHolds += 1;
+		parkOffscreen(ship.shield);
+		setEntityVisibility(ship.shield, true);
+		for (const system of latentEffects) {
+			parkOffscreen(system);
+			system.play();
+		}
+	});
+
+	let startupWarmQueued = false;
+	stage.onUpdate(() => {
+		if (startupWarmQueued) {
+			return;
+		}
+		startupWarmQueued = true;
+		queueGpuWarmup();
+	});
+
 	const hud = createAsteroidHud();
 	const ship = createShip();
 	const {
@@ -104,6 +128,17 @@ export default function createDemo() {
 		impactBurst,
 		shipDeathBurst,
 	} = createAsteroidParticles();
+	const latentEffects = [thrusterParticles, muzzleFlash, impactBurst, shipDeathBurst];
+	// Same glowing sphere the bullets use, so that material's pipeline is built
+	// before the first shot. It stays off the playfield.
+	const bulletWarmup = createSphere({
+		name: '3d-asteroids-bullet-warmup',
+		radius: SHIP_BULLET_RADIUS,
+		position: { x: 80, y: 80, z: 0 },
+		material: shipBulletMaterial,
+		collision: { static: true, sensor: true },
+		collisionFilter: [],
+	});
 	const asteroidField = createAsteroidField({
 		getPlayerPosition: () => {
 			const position = ship.entity.getPosition();
@@ -124,6 +159,68 @@ export default function createDemo() {
 	let playerDamageCooldown = 0;
 	let gameOverHudDelay = 0;
 	let gameOverHudShown = false;
+	// While > 0, the shield and particle effects stay parked offscreen so the
+	// GPU can compile them before gameplay turns them on.
+	let effectHolds = 0;
+	let warmupChain: Promise<void> = Promise.resolve();
+	let ownsStartupHold = true;
+
+	const OFFSCREEN_X = 80;
+	const OFFSCREEN_Y = 80;
+
+	function visualRoot(entity: { group?: Object3D | null; mesh?: Object3D | null }): Object3D | null {
+		return entity.group ?? entity.mesh ?? null;
+	}
+
+	function parkOffscreen(entity: { setPosition: (x: number, y: number, z: number) => void }) {
+		entity.setPosition(OFFSCREEN_X, OFFSCREEN_Y, 0);
+	}
+
+	async function warmGpuPipelines(ownsHold: boolean) {
+		if (!ownsHold) {
+			effectHolds += 1;
+		}
+		try {
+			parkOffscreen(ship.shield);
+			setEntityVisibility(ship.shield, true);
+			for (const system of latentEffects) {
+				parkOffscreen(system);
+				system.play();
+			}
+
+			const roots: Object3D[] = [];
+			for (const entity of [ship.shield, ship.entity, bulletWarmup, ...latentEffects, ...asteroidField.entities]) {
+				const root = visualRoot(entity);
+				if (root) {
+					roots.push(root);
+				}
+			}
+			const scene = stage.wrappedStage?.scene?.scene;
+			if (scene) {
+				for (const system of latentEffects) {
+					const anchor = scene.getObjectByName(`${system.name}:particle-anchor`);
+					if (anchor) {
+						roots.push(anchor);
+					}
+				}
+			}
+			await compileScene(stage, roots);
+		} catch (error) {
+			console.warn('3d asteroids GPU warmup failed', error);
+		} finally {
+			setEntityVisibility(ship.shield, playerDamageCooldown > 0);
+			for (const system of latentEffects) {
+				system.stop();
+			}
+			effectHolds = Math.max(0, effectHolds - 1);
+		}
+	}
+
+	function queueGpuWarmup() {
+		const ownsHold = ownsStartupHold;
+		ownsStartupHold = false;
+		warmupChain = warmupChain.then(() => warmGpuPipelines(ownsHold));
+	}
 
 	function stopGameplay() {
 		shipVelocity.set(0, 0, 0);
@@ -152,6 +249,15 @@ export default function createDemo() {
 		muzzleFlash.restart();
 	}
 
+	ship.entity.listen('entity:model:loaded', () => {
+		queueGpuWarmup();
+	});
+	for (const asteroid of asteroidField.entities) {
+		asteroid.listen('entity:model:loaded', () => {
+			queueGpuWarmup();
+		});
+	}
+
 	ship.entity.onCollision(({ other, globals }) => {
 		if (Boolean(globals.gameOver) || playerDamageCooldown > 0) {
 			return;
@@ -162,9 +268,11 @@ export default function createDemo() {
 			return;
 		}
 
+		const hitPosition = new Vector3(shipPosition.x, shipPosition.y, shipPosition.z ?? 0);
+		asteroidField.deflectVelocity(other.uuid, hitPosition, shipVelocity);
 		const didHitAsteroid = asteroidField.handleHitByUuid(
 			other.uuid,
-			new Vector3(shipPosition.x, shipPosition.y, shipPosition.z ?? 0),
+			hitPosition,
 			globals,
 		);
 		if (!didHitAsteroid) {
@@ -184,6 +292,7 @@ export default function createDemo() {
 	stage.add(
 		ship.entity,
 		ship.shield,
+		bulletWarmup,
 		thrusterParticles,
 		muzzleFlash,
 		impactBurst,
@@ -255,21 +364,25 @@ export default function createDemo() {
 		}
 
 		const shipWorldPosition = new Vector3(shipPosition.x, shipPosition.y, shipPosition.z ?? 0);
-		ship.shield.setPosition(shipWorldPosition.x, shipWorldPosition.y, shipWorldPosition.z);
-		ship.shield.setPositionZ(shipWorldPosition.z);
-		setEntityVisibility(ship.shield, playerDamageCooldown > 0);
+		if (effectHolds === 0) {
+			ship.shield.setPosition(shipWorldPosition.x, shipWorldPosition.y, shipWorldPosition.z);
+			ship.shield.setPositionZ(shipWorldPosition.z);
+			setEntityVisibility(ship.shield, playerDamageCooldown > 0);
+		}
 		const thrusterPosition = shipWorldPosition
 			.clone()
 			.sub(getForwardDirection(shipAngle).multiplyScalar(0.92))
 			.add(getRightDirection(shipAngle).multiplyScalar(0.02));
 		alignParticleSystem(thrusterParticles, thrusterPosition, shipAngle + Math.PI);
 
-		if (thrustInput > 0.05) {
-			if (!thrusterParticles.isPlaying()) {
-				thrusterParticles.play();
+		if (effectHolds === 0) {
+			if (thrustInput > 0.05) {
+				if (!thrusterParticles.isPlaying()) {
+					thrusterParticles.play();
+				}
+			} else if (thrusterParticles.isPlaying()) {
+				thrusterParticles.stop();
 			}
-		} else if (thrusterParticles.isPlaying()) {
-			thrusterParticles.stop();
 		}
 
 		shootCooldown = Math.max(0, shootCooldown - delta);

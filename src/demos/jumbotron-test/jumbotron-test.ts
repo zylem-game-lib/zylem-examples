@@ -72,8 +72,8 @@ export default function createDemo() {
   });
 
   const jumbotronCamera = createCamera({
-    position: { x: 30, y: 0, z: 30 },
-    target: { x: 20, y: 20, z: 0 },
+    position: { x: 22, y: 16, z: 22 },
+    target: { x: 0, y: 1, z: 0 },
     perspective: Perspectives.ThirdPerson,
     name: 'jumbotron-cam',
     renderToTexture: { width: 1024, height: 576 },

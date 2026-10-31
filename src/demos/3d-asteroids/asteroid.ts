@@ -64,11 +64,13 @@ type AsteroidFieldOptions = {
 };
 
 const ORIGIN_SPAWN_SAFE_DISTANCE = 1.5;
-const ASTEROID_COLLISION_PADDING = 0.18;
-const ASTEROID_COLLISION_MIN_SPEED = 0.2;
+const ASTEROID_COLLISION_PADDING = 0.06;
+const ASTEROID_RESTITUTION = 0.82;
+/** How fast an overlap is allowed to close, in units per second. */
+const ASTEROID_SEPARATION_SPEED = 7;
 
 function getAsteroidCollisionRadius(size: AsteroidSize) {
-	return size === 'large' ? 1.7 : 0.95;
+	return size === 'large' ? 1.05 : 0.58;
 }
 
 export function createAsteroidField({
@@ -333,79 +335,74 @@ export function createAsteroidField({
 		};
 	}
 
-	function bounceAsteroidPair(runtime: AsteroidRuntime, otherRuntime: AsteroidRuntime) {
-		if (
-			!runtime.active
-			|| !otherRuntime.active
-			|| runtime.cleanupScheduled
-			|| otherRuntime.cleanupScheduled
-			|| runtime.entity.uuid > otherRuntime.entity.uuid
-		) {
-			return;
+	function asteroidMass(size: AsteroidSize) {
+		return size === 'large' ? 3 : 1;
+	}
+
+	/**
+	 * Overlaps ease apart. A full correction in one frame reads as a pop,
+	 * especially when two rocks meet at a shallow angle.
+	 */
+	function resolveAsteroidContacts(delta: number) {
+		const active: AsteroidRuntime[] = [];
+		for (const runtime of asteroidRuntimeById.values()) {
+			if (runtime.active && !runtime.cleanupScheduled) {
+				active.push(runtime);
+			}
 		}
 
+		const maxSeparation = ASTEROID_SEPARATION_SPEED * Math.max(delta, 0);
+		for (let i = 0; i < active.length; i += 1) {
+			for (let j = i + 1; j < active.length; j += 1) {
+				separateAsteroidPair(active[i]!, active[j]!, maxSeparation);
+			}
+		}
+	}
+
+	function separateAsteroidPair(
+		runtime: AsteroidRuntime,
+		otherRuntime: AsteroidRuntime,
+		maxSeparation: number,
+	) {
 		const runtimePosition = getRuntimePosition(runtime);
 		const otherPosition = getRuntimePosition(otherRuntime);
-		const collisionNormal = otherPosition.clone().sub(runtimePosition);
-
-		if (collisionNormal.lengthSq() <= 0.0001) {
-			collisionNormal.copy(otherRuntime.velocity).sub(runtime.velocity);
+		const offset = otherPosition.clone().sub(runtimePosition);
+		const distanceSq = offset.lengthSq();
+		if (distanceSq <= 0.0001) {
+			offset.set(1, 0, 0);
 		}
-
-		if (collisionNormal.lengthSq() <= 0.0001) {
-			collisionNormal.copy(randomDirection(1));
-		}
-
-		collisionNormal.normalize();
-
-		const runtimeNormalSpeed = runtime.velocity.dot(collisionNormal);
-		const otherNormalSpeed = otherRuntime.velocity.dot(collisionNormal);
-		const closingSpeed = runtimeNormalSpeed - otherNormalSpeed;
-
-		if (closingSpeed <= 0) {
-			return;
-		}
-
-		const runtimeNormalVelocity = collisionNormal
-			.clone()
-			.multiplyScalar(runtimeNormalSpeed);
-		const otherNormalVelocity = collisionNormal
-			.clone()
-			.multiplyScalar(otherNormalSpeed);
-		const runtimeTangentialVelocity = runtime.velocity
-			.clone()
-			.sub(runtimeNormalVelocity);
-		const otherTangentialVelocity = otherRuntime.velocity
-			.clone()
-			.sub(otherNormalVelocity);
-
-		runtime.velocity
-			.copy(runtimeTangentialVelocity)
-			.add(otherNormalVelocity);
-		otherRuntime.velocity
-			.copy(otherTangentialVelocity)
-			.add(runtimeNormalVelocity);
-
-		if (runtime.velocity.lengthSq() < ASTEROID_COLLISION_MIN_SPEED ** 2) {
-			runtime.velocity.copy(collisionNormal).multiplyScalar(-ASTEROID_COLLISION_MIN_SPEED);
-		}
-
-		if (otherRuntime.velocity.lengthSq() < ASTEROID_COLLISION_MIN_SPEED ** 2) {
-			otherRuntime.velocity.copy(collisionNormal).multiplyScalar(ASTEROID_COLLISION_MIN_SPEED);
-		}
-
+		const distance = Math.sqrt(offset.lengthSq());
+		const normal = offset.multiplyScalar(1 / distance);
 		const minimumDistance = getAsteroidCollisionRadius(runtime.size)
 			+ getAsteroidCollisionRadius(otherRuntime.size)
 			+ ASTEROID_COLLISION_PADDING;
-		const currentDistance = runtimePosition.distanceTo(otherPosition);
-		const separationDistance = currentDistance < minimumDistance
-			? (minimumDistance - currentDistance) * 0.5
-			: ASTEROID_COLLISION_PADDING * 0.5;
+		const overlap = minimumDistance - distance;
+		if (overlap <= 0) {
+			return;
+		}
 
-		runtimePosition.addScaledVector(collisionNormal, -separationDistance);
-		otherPosition.addScaledVector(collisionNormal, separationDistance);
-		syncRuntimePosition(runtime, runtimePosition);
-		syncRuntimePosition(otherRuntime, otherPosition);
+		const runtimeNormalSpeed = runtime.velocity.dot(normal);
+		const otherNormalSpeed = otherRuntime.velocity.dot(normal);
+		const closingSpeed = runtimeNormalSpeed - otherNormalSpeed;
+		if (closingSpeed > 0) {
+			const runtimeMass = asteroidMass(runtime.size);
+			const otherMass = asteroidMass(otherRuntime.size);
+			const share = (1 + ASTEROID_RESTITUTION) * closingSpeed / (runtimeMass + otherMass);
+			runtime.velocity.addScaledVector(normal, -share * otherMass);
+			otherRuntime.velocity.addScaledVector(normal, share * runtimeMass);
+			runtime.velocity.z = 0;
+			otherRuntime.velocity.z = 0;
+			const glance = runtime.velocity.x * normal.y - runtime.velocity.y * normal.x;
+			runtime.spin.z += glance * 0.05;
+			otherRuntime.spin.z -= glance * 0.05;
+		}
+
+		const step = Math.min(overlap * 0.5, maxSeparation);
+		if (step <= 0) {
+			return;
+		}
+		syncRuntimePosition(runtime, runtimePosition.addScaledVector(normal, -step));
+		syncRuntimePosition(otherRuntime, otherPosition.addScaledVector(normal, step));
 	}
 
 	function createAsteroid(
@@ -423,9 +420,12 @@ export function createAsteroidField({
 			models: [redAsteroidGlb],
 			scale: { x: scale, y: scale, z: scale },
 			collisionShape: 'bounds',
-			collision: {
-				size: collisionSize,
-			},
+		collision: {
+			size: collisionSize,
+			// Scripted motion owns the bounce. A solid body would also depenetrate
+			// in the solver and pop the mesh on the same frame.
+			sensor: true,
+		},
 			position: { x: position.x, y: position.y, z: 0 },
 			visible: false,
 		});
@@ -501,17 +501,6 @@ export function createAsteroidField({
 
 		asteroid.listen('entity:model:loaded', () => {
 			bindPrimaryMesh();
-		});
-
-		asteroid.onCollision(({ other }) => {
-			const otherRuntime = asteroidRuntimeById.get(other.uuid);
-			if (!otherRuntime) {
-				return;
-			}
-
-			bounceAsteroidPair(runtime, otherRuntime);
-		}, {
-			phase: 'enter',
 		});
 
 		asteroid.onUpdate(({ me, delta }) => {
@@ -716,6 +705,24 @@ export function createAsteroidField({
 			...largeAsteroidPool.map((runtime) => runtime.entity),
 			...smallAsteroidPool.map((runtime) => runtime.entity),
 		],
+		deflectVelocity(asteroidUuid: string, fromPosition: Vector3, velocity: Vector3) {
+			const runtime = asteroidRuntimeById.get(asteroidUuid);
+			if (!runtime?.active) {
+				return;
+			}
+			const normal = fromPosition.clone().sub(getRuntimePosition(runtime));
+			normal.z = 0;
+			if (normal.lengthSq() <= 0.0001) {
+				return;
+			}
+			normal.normalize();
+			const closingSpeed = -velocity.dot(normal);
+			if (closingSpeed <= 0) {
+				return;
+			}
+			velocity.addScaledVector(normal, closingSpeed * (1 + ASTEROID_RESTITUTION));
+			velocity.z = 0;
+		},
 		handleHitByUuid(otherUuid: string, impactWorld: Vector3, globals: Record<string, unknown>) {
 			const runtime = asteroidRuntimeById.get(otherUuid);
 			if (!runtime) {
@@ -724,6 +731,7 @@ export function createAsteroidField({
 			return handleAsteroidHit(runtime, impactWorld, globals);
 		},
 		tick(delta: number, elapsedSeconds: number) {
+			resolveAsteroidContacts(delta);
 			while (pendingSplitSpawns.length > 0) {
 				const next = pendingSplitSpawns.shift();
 				if (!next) {
